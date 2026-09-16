@@ -13,8 +13,12 @@
     '    <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
     '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
-    '  <div class="approw"><span id="aicheck-layoutline" class="line"></span><span id="aicheck-reportline" class="line"></span></div>' +
+    '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div></details>' +
     '</section>';
+
+  // Studio does not tell the page how tall its container is: measure the room below the app's top edge, so the
+  // two columns scroll inside the panel and the Send bar sits at the bottom (C31 — the page was clipped, not scrolled)
+  function fitHeight() { var app = document.querySelector('.aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; }
 
   function listInProgress() {
     var sel = $('aicheck-list'); if (!sel) return;
@@ -47,6 +51,7 @@
     if (!D.layout.template) { var tid = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_ID'), tnm = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_NAME'); if (tid || tnm) D.layout.template = { id: tid || null, name: tnm || null }; }
     var pub = S.obj.MetaData.BasicMetaData.Publication; D.layout.brand = (pub && pub.Name) || null;   // an "always" rule is scoped to the brand
     var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = false;
+    fitHeight();
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
     S.review = window.bootReview(D);
     $('aicheck-send').disabled = false;
@@ -74,6 +79,7 @@
     onInit: function () {
       if (!document.getElementById('aicheck-style')) { var st = document.createElement('style'); st.id = 'aicheck-style'; st.textContent = PAGE_CSS; document.head.appendChild(st); }
       var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = true;
+      fitHeight(); window.addEventListener('resize', fitHeight); setTimeout(fitHeight, 300);
       var foot = document.getElementById('foot'); if (foot) { foot.textContent = 'AI Check plug-in ' + VERSION; foot.setAttribute('data-fixed', '1'); }
       $('aicheck-load').onclick = function () { var id = $('aicheck-id').value.trim(); if (id) loadLayout(id); };
       $('aicheck-list').onchange = function () { if (this.value) { $('aicheck-id').value = this.value; loadLayout(this.value); } };

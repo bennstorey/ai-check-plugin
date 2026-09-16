@@ -82,6 +82,9 @@ STUDIO_CSS = """
 .aicheck-app .jobdetails textarea{width:100%;height:64px;font:400 11px/1.4 "IBM Plex Mono",ui-monospace,Menlo,monospace;background:var(--ground);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px}
 .aicheck-app .foot{padding:4px 24px 8px;color:var(--ink-3);font-size:11px;flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aicheck-app .approw .line{color:var(--ink);font-size:12px}
+.aicheck-app .appdetails{font-size:12px;color:var(--ink-3)}
+.aicheck-app .appdetails summary{cursor:pointer}
+.aicheck-app .appdetails .approw{margin-top:4px}
 @media (max-width:900px){.aicheck-app main.wrap{grid-template-columns:1fr;overflow:auto}}
 """
 def js_string(s): return "'" + s.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n').replace('</script', '<\\/script') + "'"
