@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><title>AI Check plug-in — stub harness</title>
-<style>body{margin:0;font-family:system-ui}#host{padding:0}</style></head><body>
+<style>html,body{margin:0;height:100%;font-family:system-ui}#host{height:calc(100vh - 48px);border-top:48px solid #2a3340;box-sizing:border-box}</style></head><body>
 <div id="host"></div>
 <script>
 // Minimal stand-in for the Content Station SDK: renders the app content, calls onInit, logs the rest.
@@ -8,7 +8,8 @@ window.ContentStationSdk = {
   getInfo: function () { return { Ticket: '', ServerInfo: { FeatureSet: [] } }; },
   showNotification: function (c) { console.log('notify', c.content); return 1; }
 };
-window.csConfig = { serverUrl: '/studio/index.php' };   // through the local proxy when served by serve.py
+window.csConfig = { serverUrl: '/studio/index.php' };
+if (location.search.indexOf('demo') >= 0) window.__aiCheckDemo = { id: '82426', name: 'AI test layout', version: '0.28', report: '/gt/2026-09-16-event-route/82426-runner-ev-1789578713326.json', previews: { '2': '/gt/2026-09-10-review-page-prototype/page-2.jpg', '3': '/gt/2026-09-10-review-page-prototype/page-3.jpg', '4': '/gt/2026-09-10-review-page-prototype/page-4.jpg', '5': '/gt/2026-09-10-review-page-prototype/page-5.jpg' } };   // through the local proxy when served by serve.py
 </script>
 <script src="dist/ai-check-plugin.js"></script>
 </body></html>

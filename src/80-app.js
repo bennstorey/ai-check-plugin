@@ -2,21 +2,17 @@
   var CFG = { checkField: 'C_AI_CHECK', actionsField: 'C_AI_ACTIONS', reportField: 'C_AI_REPORT', localReports: 'http://localhost:8765' };
   var S = { obj: null, report: null, pointer: null, review: null };
   var $ = function (id) { return document.getElementById(id); };
-  function say(msg, kind) { var e = $('aicheck-msg'); if (e) { e.textContent = msg; e.className = 'appmsg ' + (kind || ''); } }
+  function say(msg, kind) { var main = document.querySelector('.aicheck-app main.wrap'); var e = (main && !main.hidden) ? $('aicheck-msg') : $('aicheck-msg0'); if (!e) e = $('aicheck-msg0') || $('aicheck-msg'); if (e) { e.textContent = msg; e.className = 'appmsg ' + (kind || ''); } var other = (e && e.id === 'aicheck-msg') ? $('aicheck-msg0') : $('aicheck-msg'); if (other) { other.textContent = ''; other.className = 'appmsg'; } }
 
   var PICKER = '' +
     '<section class="panel apppanel" id="aicheck-picker">' +
-    '  <div class="approw"><label>Layout or template ID <input id="aicheck-id" size="8" placeholder="91908"></label>' +
+    '  <div class="approw"><label>Layout or template <input id="aicheck-id" size="7" placeholder="ID"></label>' +
     '    <button class="btn primary" id="aicheck-load">Load</button>' +
-    '    <label>or pick one with a check in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label></div>' +
-    '  <div class="approw"><span id="aicheck-layoutline" class="line"></span></div>' +
-    '  <div class="approw"><span id="aicheck-reportline" class="line"></span>' +
-    '    <label class="btn">Load a report file <input type="file" id="aicheck-file" accept="application/json" hidden></label></div>' +
-    '  <div class="approw">' +
+    '    <label>in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
     '    <button class="btn" id="aicheck-request" disabled>Request a check at the next check-in</button>' +
-    '    <button class="btn primary" id="aicheck-send" disabled>Send the ticked fixes</button>' +
-    '    <button class="btn" id="aicheck-sendtpl" disabled>Send the template job</button>' +
-    '    <span id="aicheck-msg" class="appmsg"></span></div>' +
+    '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
+    '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
+    '  <div class="approw"><span id="aicheck-layoutline" class="line"></span><span id="aicheck-reportline" class="line"></span></div>' +
     '</section>';
 
   function listInProgress() {
@@ -57,7 +53,7 @@
     var out = window.REVIEW_OUT || {}, acts = out.actions || []; if (!acts.length) { say('Nothing ticked.', 'warn'); return; }
     var payload = { runId: S.report.runId, decidedAt: new Date().toISOString(), actions: acts, ignore: out.ignore || [], labels: out.labels || {} }, props = {};
     props[CFG.actionsField] = JSON.stringify(payload); props[CFG.checkField] = 'Fixes approved';
-    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + acts.length + ' fix' + (acts.length === 1 ? '' : 'es') + ' written to the layout, AI check set to “Fixes approved”. They apply at the next check-in.', 'ok'); notify('AI Check: ' + acts.length + ' fix' + (acts.length === 1 ? '' : 'es') + ' approved for the next check-in', 'info'); listInProgress(); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
+    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent ' + acts.length + ' fix' + (acts.length === 1 ? '' : 'es') + '. Now open the layout in InDesign (checked out) and check it in: they apply during that check-in.', 'ok'); notify('AI Check: ' + acts.length + ' fix' + (acts.length === 1 ? '' : 'es') + ' approved for the next check-in', 'info'); listInProgress(); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
   }
   function sendTemplateJob() {
     var out = window.REVIEW_OUT || {}, job = out.job; if (!job || !job.Actions || !job.Actions.length) { say('No template to-dos flagged.', 'warn'); return; }
@@ -74,7 +70,7 @@
     onInit: function () {
       if (!document.getElementById('aicheck-style')) { var st = document.createElement('style'); st.id = 'aicheck-style'; st.textContent = PAGE_CSS; document.head.appendChild(st); }
       var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = true;
-      var foot = document.getElementById('foot'); if (foot) foot.textContent = 'AI Check plug-in ' + VERSION;
+      var foot = document.getElementById('foot'); if (foot) { foot.textContent = 'AI Check plug-in ' + VERSION; foot.setAttribute('data-fixed', '1'); }
       $('aicheck-load').onclick = function () { var id = $('aicheck-id').value.trim(); if (id) loadLayout(id); };
       $('aicheck-list').onchange = function () { if (this.value) { $('aicheck-id').value = this.value; loadLayout(this.value); } };
       $('aicheck-file').onchange = function () { var f = this.files[0]; if (!f || !S.obj) { say('Load the layout first.', 'warn'); return; } var rd = new FileReader(); rd.onload = function () { try { buildPage(JSON.parse(rd.result)); } catch (e) { say('Not a runner report: ' + e.message, 'err'); } }; rd.readAsText(f); };
@@ -84,3 +80,5 @@
     buttons: [{ label: 'Reload', type: 'secondary', callback: function () { if (S.obj) loadLayout(S.obj.MetaData.BasicMetaData.ID); listInProgress(); } }]
   });
   window.__aiCheck = { state: S, version: VERSION, loadLayout: loadLayout };
+  // harness demo: window.__aiCheckDemo = { report: url, previews: {pageName: url}, name, version } — builds the page without Studio
+  if (window.__aiCheckDemo) setTimeout(function () { var d = window.__aiCheckDemo; S.obj = { MetaData: { BasicMetaData: { ID: d.id || '0', Name: d.name || 'demo', Type: 'Layout' }, WorkflowMetaData: { Version: d.version || '0', State: { Name: 'demo' } }, ExtraMetaData: [] }, Pages: Object.keys(d.previews || {}).map(function (pn) { return { PageNumber: pn, Files: [{ Rendition: 'preview', FileUrl: d.previews[pn] + '?ww-app=x' }] }; }) }; fetch(d.report).then(function (r) { return r.json(); }).then(buildPage).catch(function (e) { say('demo: ' + e.message, 'err'); }); }, 50);
