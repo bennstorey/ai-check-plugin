@@ -55,6 +55,8 @@ def studio_markup(m):
     m = re.sub(r'<div class="out">.*?</div>\s*</section>\s*</main>', decide + '\n  </section>\n</main>', m, flags=re.S)
     m = re.sub(r'<div class="legend">.*?</div>', '<div class="legend"><span class="b"><i></i>Block</span><span class="w"><i></i>Warn</span><span class="i"><i></i>Info</span><label><input type="checkbox" id="showAll"> Show every frame</label></div>', m, flags=re.S)
     m = m.replace('<footer class="foot" id="foot"></footer>', '<div class="foot" id="foot"></div>')
+    # a draggable divider between the preview column and the findings column (Benn 2026-09-17)
+    m = m.replace('<section class="panel" aria-label="Findings">', '<div class="splitter" id="aicheck-split" title="Drag to resize the columns; double-click to reset"></div>\n  <section class="panel" aria-label="Findings">', 1)
     return m
 STUDIO_CSS = """
 .aicheck-app .wrap[hidden]{display:none}
@@ -67,10 +69,12 @@ STUDIO_CSS = """
 .aicheck-app .appmsg.ok{background:var(--accent-soft);color:var(--accent)} .aicheck-app .appmsg.warn{background:var(--warn-soft);color:var(--warn)} .aicheck-app .appmsg.err{background:var(--block-soft);color:var(--block)}
 .aicheck-app .top.compact{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:6px 24px 0;border:0;background:transparent;flex:0 0 auto}
 .aicheck-app .top.compact .ttl{font-weight:600;font-size:15px}
-.aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 1fr;grid-template-rows:minmax(0,1fr);gap:12px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
+.aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 8px 1fr;grid-template-rows:minmax(0,1fr);gap:8px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
+.aicheck-app .splitter{cursor:col-resize;background:var(--line);border-radius:4px;align-self:stretch;touch-action:none}
+.aicheck-app .splitter:hover,.aicheck-app .splitter.active{background:var(--accent)}
 .aicheck-app main.wrap>.panel{min-height:0;overflow:auto;display:flex;flex-direction:column}
 .aicheck-app .viewer{position:static;align-self:stretch}
-.aicheck-app .stage{flex:0 0 auto}
+.aicheck-app .stage{flex:1 1 auto;min-height:0}
 .aicheck-app .page{max-width:100%}
 .aicheck-app .zoombar,.aicheck-app .legend{flex:0 0 auto}
 .aicheck-app #groups{flex:1 1 auto}
@@ -86,7 +90,7 @@ STUDIO_CSS = """
 .aicheck-app .appdetails{font-size:12px;color:var(--ink-3)}
 .aicheck-app .appdetails summary{cursor:pointer}
 .aicheck-app .appdetails .approw{margin-top:4px}
-@media (max-width:900px){.aicheck-app main.wrap{grid-template-columns:1fr;grid-template-rows:auto;overflow:auto}}
+@media (max-width:900px){.aicheck-app main.wrap{grid-template-columns:1fr;grid-template-rows:auto;overflow:auto}.aicheck-app .splitter{display:none}}
 """
 def js_string(s): return "'" + s.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n').replace('</script', '<\\/script') + "'"
 srcs = sorted(f for f in os.listdir(os.path.join(HERE, 'src')) if f.endswith('.js') and not f.startswith('_'))

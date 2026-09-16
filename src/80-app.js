@@ -21,7 +21,19 @@
   function fitHeight() { var app = document.querySelector('.aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; fitPage(); }
   // the page box is as wide as its column by default; cap it so the whole page fits the room the preview column has
   // (tabs, zoom bar and legend subtracted), otherwise the bottom of the page is out of view and the zoom centres there
-  function fitPage() { var page = document.getElementById('page'), vw = document.querySelector('.aicheck-app .viewer'); if (!page || !vw || !S.pageSize) return; var used = 0; ['.tabs', '.zoombar', '.legend'].forEach(function (sel) { var e = vw.querySelector(sel); if (e) used += e.offsetHeight; }); var st = vw.querySelector('.stage'); var pad = st ? (st.offsetHeight - page.offsetHeight) : 28; var room = vw.clientHeight - used - Math.max(pad, 0) - 4; if (room < 120) { page.style.maxWidth = ''; return; } page.style.maxWidth = 'min(100%, ' + Math.floor(room * S.pageSize[0] / S.pageSize[1]) + 'px)'; }
+  function fitPage() { var page = document.getElementById('page'), st = document.querySelector('.aicheck-app .stage'); if (!page || !st || !S.pageSize) return; var room = st.clientHeight - 28; if (room < 120) { page.style.maxWidth = ''; return; } page.style.maxWidth = 'min(100%, ' + Math.floor(room * S.pageSize[0] / S.pageSize[1]) + 'px)'; }   // the stage fills the column (flex); the page box fits inside it, and the zoom uses the stage as its window
+  // the divider between the columns: drag to resize, double-click to reset; the width is a per-browser convenience
+  function initSplitter() {
+    var sp = $('aicheck-split'), main = document.querySelector('.aicheck-app main.wrap'); if (!sp || !main) return;
+    var KEY = 'aicheck-split', down = null;
+    function apply(px) { var max = main.clientWidth - 380; if (px < 260) px = 260; if (px > max) px = max; main.style.gridTemplateColumns = px + 'px 8px 1fr'; return px; }
+    try { var saved = parseInt(localStorage.getItem(KEY), 10); if (saved > 0) apply(saved); } catch (e) {}
+    sp.addEventListener('pointerdown', function (ev) { if (ev.button !== 0) return; var vw = main.querySelector('.viewer'); down = { x: ev.clientX, w: vw ? vw.getBoundingClientRect().width : 400 }; sp.classList.add('active'); try { sp.setPointerCapture(ev.pointerId); } catch (e) {} ev.preventDefault(); });
+    sp.addEventListener('pointermove', function (ev) { if (!down) return; apply(down.w + (ev.clientX - down.x)); });
+    function up() { if (!down) return; down = null; sp.classList.remove('active'); var vw = main.querySelector('.viewer'); try { if (vw) localStorage.setItem(KEY, String(Math.round(vw.getBoundingClientRect().width))); } catch (e) {} }
+    sp.addEventListener('pointerup', up); sp.addEventListener('pointercancel', up);
+    sp.addEventListener('dblclick', function () { main.style.gridTemplateColumns = ''; try { localStorage.removeItem(KEY); } catch (e) {} });
+  }
 
   function listInProgress() {
     var sel = $('aicheck-list'); if (!sel) return;
@@ -85,6 +97,7 @@
       var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = true;
       fitHeight(); window.addEventListener('resize', fitHeight); setTimeout(fitHeight, 300);
       var bl = $('aicheck-buildline'); if (bl) bl.textContent = 'AI Check plug-in build ' + VERSION;
+      initSplitter();
       var foot = document.getElementById('foot'); if (foot) { foot.textContent = 'AI Check plug-in ' + VERSION; foot.setAttribute('data-fixed', '1'); }
       $('aicheck-load').onclick = function () { var id = $('aicheck-id').value.trim(); if (id) loadLayout(id); };
       $('aicheck-list').onchange = function () { if (this.value) { $('aicheck-id').value = this.value; loadLayout(this.value); } };
