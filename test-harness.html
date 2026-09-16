@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>AI Check plug-in — stub harness</title>
+<style>body{margin:0;font-family:system-ui}#host{padding:0}</style></head><body>
+<div id="host"></div>
+<script>
+// Minimal stand-in for the Content Station SDK: renders the app content, calls onInit, logs the rest.
+window.ContentStationSdk = {
+  registerCustomApp: function (cfg) { var h = document.getElementById('host'); h.innerHTML = cfg.content; document.title = cfg.title; setTimeout(function () { try { cfg.onInit && cfg.onInit(); console.log('onInit ok'); } catch (e) { console.error('onInit threw', e); } }, 0); window.__cfg = cfg; },
+  getInfo: function () { return { Ticket: '', ServerInfo: { FeatureSet: [] } }; },
+  showNotification: function (c) { console.log('notify', c.content); return 1; }
+};
+window.csConfig = { serverUrl: '/studio/index.php' };   // through the local proxy when served by serve.py
+</script>
+<script src="dist/ai-check-plugin.js"></script>
+</body></html>
