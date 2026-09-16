@@ -69,9 +69,10 @@ STUDIO_CSS = """
 .aicheck-app .top.compact .ttl{font-weight:600;font-size:15px}
 .aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 1fr;gap:12px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
 .aicheck-app main.wrap>.panel{min-height:0;overflow:auto;display:flex;flex-direction:column}
-.aicheck-app .viewer{position:static}
+.aicheck-app .viewer{position:static;align-self:stretch}
 .aicheck-app .stage{flex:0 0 auto}
 .aicheck-app .page{max-width:100%}
+.aicheck-app .zoombar,.aicheck-app .legend{flex:0 0 auto}
 .aicheck-app #groups{flex:1 1 auto}
 .aicheck-app .out.decide{position:sticky;bottom:0;display:flex;flex-direction:column;gap:6px;padding:8px 12px;background:var(--paper);border-top:2px solid var(--accent)}
 .aicheck-app .decide-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}

@@ -18,7 +18,10 @@
 
   // Studio does not tell the page how tall its container is: measure the room below the app's top edge, so the
   // two columns scroll inside the panel and the Send bar sits at the bottom (C31 — the page was clipped, not scrolled)
-  function fitHeight() { var app = document.querySelector('.aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; }
+  function fitHeight() { var app = document.querySelector('.aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; fitPage(); }
+  // the page box is as wide as its column by default; cap it so the whole page fits the room the preview column has
+  // (tabs, zoom bar and legend subtracted), otherwise the bottom of the page is out of view and the zoom centres there
+  function fitPage() { var page = document.getElementById('page'), vw = document.querySelector('.aicheck-app .viewer'); if (!page || !vw || !S.pageSize) return; var used = 0; ['.tabs', '.zoombar', '.legend'].forEach(function (sel) { var e = vw.querySelector(sel); if (e) used += e.offsetHeight; }); var st = vw.querySelector('.stage'); var pad = st ? (st.offsetHeight - page.offsetHeight) : 28; var room = vw.clientHeight - used - Math.max(pad, 0) - 4; if (room < 120) { page.style.maxWidth = ''; return; } page.style.maxWidth = 'min(100%, ' + Math.floor(room * S.pageSize[0] / S.pageSize[1]) + 'px)'; }
 
   function listInProgress() {
     var sel = $('aicheck-list'); if (!sel) return;
@@ -53,7 +56,8 @@
     var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = false;
     fitHeight();
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
-    S.review = window.bootReview(D);
+    S.review = window.bootReview(D); S.pageSize = D.pageSize;
+    fitPage(); if (window.ResizeObserver && !S.ro) { S.ro = new ResizeObserver(function () { fitPage(); }); S.ro.observe(document.querySelector('.aicheck-app .viewer')); }
     $('aicheck-send').disabled = false;
     say('Loaded. Choose an action on each finding, decide the labels, then Send.', 'ok');
   }
