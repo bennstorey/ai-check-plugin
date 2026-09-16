@@ -9,7 +9,8 @@
     '  <div class="approw"><label>Layout or template <input id="aicheck-id" size="7" placeholder="ID"></label>' +
     '    <button class="btn primary" id="aicheck-load">Load</button>' +
     '    <label>in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
-    '    <button class="btn" id="aicheck-request" disabled>Request a check at the next check-in</button>' +
+    '    <button class="btn" id="aicheck-request" disabled>Request a check</button>' +
+    '    <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
     '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
     '  <div class="approw"><span id="aicheck-layoutline" class="line"></span><span id="aicheck-reportline" class="line"></span></div>' +
@@ -32,6 +33,8 @@
       var ptr = extraOf(o, CFG.reportField); S.pointer = null; try { S.pointer = ptr ? JSON.parse(ptr) : null; } catch (e) {}
       $('aicheck-reportline').textContent = S.pointer ? ('Latest run ' + S.pointer.runId + ' at ' + S.pointer.at + ': ' + S.pointer.summary) : 'No report on this layout yet. Request a check, then check the layout in from InDesign.';
       $('aicheck-request').disabled = false;
+      S.templateId = (md.BasicMetaData.Type === 'Layout' && /^\d+$/.test(extraOf(o, 'C_LAYOUT_TEMPLATE_ID'))) ? extraOf(o, 'C_LAYOUT_TEMPLATE_ID') : null;
+      $('aicheck-checktpl').disabled = !S.templateId; $('aicheck-checktpl').title = S.templateId ? REVIEW_TIPS.checkTemplate : 'This layout does not name its template (no template ID property).';
       if (S.pointer && S.pointer.file) return fetch(CFG.localReports + '/localreport?path=' + encodeURIComponent(S.pointer.file), { mode: 'cors' }).then(function (r) { if (!r.ok) throw new Error('local report ' + r.status); return r.json(); }).then(buildPage).catch(function (e) { say('Layout loaded. The report file is not reachable from here (' + e.message + '): load it from a file.', 'warn'); });
       say('Layout loaded.', 'ok');
     }).catch(function (e) { say(e.message, 'err'); });
@@ -42,27 +45,28 @@
     (S.obj.Pages || []).forEach(function (p) { var f = (p.Files || []).filter(function (x) { return x.Rendition === 'preview'; })[0]; if (f && f.FileUrl) images[String(p.PageNumber)] = withWwApp(f.FileUrl); });
     var D = ReviewEnrich.buildData(report, images, 'Report ' + report.runId + ' on ' + S.obj.MetaData.BasicMetaData.Name + ' v' + S.obj.MetaData.WorkflowMetaData.Version + '; previews from Studio at that version.');
     if (!D.layout.template) { var tid = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_ID'), tnm = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_NAME'); if (tid || tnm) D.layout.template = { id: tid || null, name: tnm || null }; }
+    var pub = S.obj.MetaData.BasicMetaData.Publication; D.layout.brand = (pub && pub.Name) || null;   // an "always" rule is scoped to the brand
     var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = false;
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
     S.review = window.bootReview(D);
-    $('aicheck-send').disabled = false; $('aicheck-sendtpl').disabled = false;
-    say('Loaded. Tick fixes, decide labels, then send.', 'ok');
+    $('aicheck-send').disabled = false;
+    say('Loaded. Choose an action on each finding, decide the labels, then Send.', 'ok');
   }
 
-  function sendFixes() {
-    var out = window.REVIEW_OUT || {}, acts = out.actions || []; if (!acts.length) { say('Nothing ticked.', 'warn'); return; }
-    var payload = { runId: S.report.runId, decidedAt: new Date().toISOString(), actions: acts, ignore: out.ignore || [], labels: out.labels || {} }, props = {};
-    props[CFG.actionsField] = JSON.stringify(payload); props[CFG.checkField] = 'Fixes approved';
-    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent ' + acts.length + ' fix' + (acts.length === 1 ? '' : 'es') + '. Now open the layout in InDesign (checked out) and check it in: they apply during that check-in.', 'ok'); notify('AI Check: ' + acts.length + ' fix' + (acts.length === 1 ? '' : 'es') + ' approved for the next check-in', 'info'); listInProgress(); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
-  }
-  function sendTemplateJob() {
-    var out = window.REVIEW_OUT || {}, job = out.job; if (!job || !job.Actions || !job.Actions.length) { say('No template to-dos flagged.', 'warn'); return; }
-    var tid = job.DocumentId; if (!/^\d+$/.test(String(tid))) { say('This layout does not name its template (no template ID property), so the template job cannot be addressed.', 'warn'); return; }
-    var payload = { fromLayout: S.obj.MetaData.BasicMetaData.ID, runId: S.report.runId, decidedAt: new Date().toISOString(), actions: job.Actions, todos: out.todos }, props = {};
-    props[CFG.actionsField] = JSON.stringify(payload); props[CFG.checkField] = 'Fixes approved';
-    setProps(tid, props).then(function () { say('Template job sent: ' + job.Actions.length + ' change' + (job.Actions.length === 1 ? '' : 's') + ' written to the template (' + tid + '); they apply at its next check-in.', 'ok'); }).catch(function (e) { say('Template job failed: ' + e.message, 'err'); });
+  // who is deciding: the SDK's info block — field names untested on this server, so every shape is tried and '' is the fallback
+  function whoAmI() { try { var i = ContentStationSdk.getInfo() || {}; var u = i.User || i.user || {}; return u.FullName || u.UserName || u.Name || i.UserName || i.FullName || i.User || ''; } catch (e) { return ''; } }
+  function send() {
+    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [];
+    var labelsDecided = Object.keys(out.labels || {}).filter(function (k) { return out.labels[k]; }).length;
+    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided) { say('No decisions yet.', 'warn'); return; }
+    var payload = { runId: S.report.runId, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos }, props = {};
+    props[CFG.actionsField] = JSON.stringify(payload);
+    if (acts.length) props[CFG.checkField] = 'Fixes approved';   // nothing to apply → the decisions are recorded, the field stays as it is
+    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '');
+    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' Now open the layout in InDesign (checked out) and check it in: the fixes apply during that check-in.' : ' Nothing to apply, so the AI check field is unchanged.'), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved for the next check-in', 'info'); listInProgress(); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
   }
   function requestCheck() { var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.obj.MetaData.BasicMetaData.ID, p).then(function () { say('AI check set to “Requested”: it runs at the next check-in of this layout.', 'ok'); listInProgress(); }).catch(function (e) { say('Request failed: ' + e.message, 'err'); }); }
+  function checkTemplate() { if (!S.templateId) { say('This layout does not name its template.', 'warn'); return; } var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.templateId, p).then(function () { say('AI check set to “Requested” on template ' + S.templateId + ': it runs at the template\'s next check-in.', 'ok'); listInProgress(); }).catch(function (e) { say('Request on the template failed: ' + e.message, 'err'); }); }
 
   ContentStationSdk.registerCustomApp({
     name: 'ai-check', title: 'AI Check',
@@ -74,7 +78,9 @@
       $('aicheck-load').onclick = function () { var id = $('aicheck-id').value.trim(); if (id) loadLayout(id); };
       $('aicheck-list').onchange = function () { if (this.value) { $('aicheck-id').value = this.value; loadLayout(this.value); } };
       $('aicheck-file').onchange = function () { var f = this.files[0]; if (!f || !S.obj) { say('Load the layout first.', 'warn'); return; } var rd = new FileReader(); rd.onload = function () { try { buildPage(JSON.parse(rd.result)); } catch (e) { say('Not a runner report: ' + e.message, 'err'); } }; rd.readAsText(f); };
-      $('aicheck-request').onclick = requestCheck; $('aicheck-send').onclick = sendFixes; $('aicheck-sendtpl').onclick = sendTemplateJob;
+      $('aicheck-request').onclick = requestCheck; $('aicheck-request').title = REVIEW_TIPS.request;
+      $('aicheck-checktpl').onclick = checkTemplate; $('aicheck-checktpl').title = REVIEW_TIPS.checkTemplate;
+      $('aicheck-send').onclick = send; $('aicheck-send').title = REVIEW_TIPS.send;
       listInProgress();
     },
     buttons: [{ label: 'Reload', type: 'secondary', callback: function () { if (S.obj) loadLayout(S.obj.MetaData.BasicMetaData.ID); listInProgress(); } }]

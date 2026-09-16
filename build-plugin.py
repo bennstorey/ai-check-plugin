@@ -43,12 +43,13 @@ def studio_markup(m):
     decide = (
         '<div class="out decide">'
         '  <div class="decide-row"><span class="sum" id="actSum"></span><span class="sum" id="todoSum"></span><span class="sum" id="ignSum"></span></div>'
-        '  <div class="decide-row"><button class="btn primary" id="aicheck-send" disabled>Send the ticked fixes</button><button class="btn" id="aicheck-sendtpl" disabled>Send the template job</button><span id="aicheck-msg" class="appmsg"></span></div>'
-        '  <div class="decide-row hint">Sent fixes apply during the next Check In of this layout from InDesign: open it (checked out), then check it in. Ignored findings feed the brand\'s accepted-deviations list.</div>'
+        '  <div class="decide-row"><button class="btn primary" id="aicheck-send" disabled>Send</button><span id="aicheck-msg" class="appmsg"></span></div>'
+        '  <div class="decide-row hint">Send writes the decisions to the layout and sets its AI check to Fixes approved. The layout must then be checked out and checked in from InDesign for the fixes to apply. Always rules travel with the decisions; their home in the brand knowledge is still to build.</div>'
         '  <details class="jobdetails"><summary>Job details</summary>'
         '    <label>Fixes (Actions)<textarea id="actions" readonly spellcheck="false"></textarea></label><button class="btn" id="copyActions">Copy</button>'
-        '    <label>Template job and to-dos<textarea id="todos" readonly spellcheck="false"></textarea></label><button class="btn" id="copyTodos">Copy</button>'
-        '    <label>Ignored<textarea id="ignore" readonly spellcheck="false"></textarea></label><button class="btn" id="copyIgnore">Copy</button>'
+        '    <label>Brand rules (Always fix / Always ignore)<textarea id="rules" readonly spellcheck="false"></textarea></label>'
+        '    <label>Template to-dos<textarea id="todos" readonly spellcheck="false"></textarea></label><button class="btn" id="copyTodos">Copy</button>'
+        '    <label>Ignored this time<textarea id="ignore" readonly spellcheck="false"></textarea></label><button class="btn" id="copyIgnore">Copy</button>'
         '  </details>'
         '</div>')
     m = re.sub(r'<div class="out">.*?</div>\s*</section>\s*</main>', decide + '\n  </section>\n</main>', m, flags=re.S)
