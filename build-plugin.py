@@ -67,7 +67,7 @@ STUDIO_CSS = """
 .aicheck-app .appmsg.ok{background:var(--accent-soft);color:var(--accent)} .aicheck-app .appmsg.warn{background:var(--warn-soft);color:var(--warn)} .aicheck-app .appmsg.err{background:var(--block-soft);color:var(--block)}
 .aicheck-app .top.compact{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:6px 24px 0;border:0;background:transparent;flex:0 0 auto}
 .aicheck-app .top.compact .ttl{font-weight:600;font-size:15px}
-.aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 1fr;gap:12px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
+.aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 1fr;grid-template-rows:minmax(0,1fr);gap:12px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
 .aicheck-app main.wrap>.panel{min-height:0;overflow:auto;display:flex;flex-direction:column}
 .aicheck-app .viewer{position:static;align-self:stretch}
 .aicheck-app .stage{flex:0 0 auto}
@@ -86,7 +86,7 @@ STUDIO_CSS = """
 .aicheck-app .appdetails{font-size:12px;color:var(--ink-3)}
 .aicheck-app .appdetails summary{cursor:pointer}
 .aicheck-app .appdetails .approw{margin-top:4px}
-@media (max-width:900px){.aicheck-app main.wrap{grid-template-columns:1fr;overflow:auto}}
+@media (max-width:900px){.aicheck-app main.wrap{grid-template-columns:1fr;grid-template-rows:auto;overflow:auto}}
 """
 def js_string(s): return "'" + s.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n').replace('</script', '<\\/script') + "'"
 srcs = sorted(f for f in os.listdir(os.path.join(HERE, 'src')) if f.endswith('.js') and not f.startswith('_'))
