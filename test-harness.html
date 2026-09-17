@@ -10,7 +10,8 @@ window.ContentStationSdk = {
 };
 window.csConfig = { serverUrl: '/studio/index.php' };
 var __run = (/[?&]airun=([A-Za-z0-9T-]+Z?)/.exec(location.search) || [])[1];
-if (__run) window.__aiCheckDemo = { id: '91908', name: 'NF1207Riddell', version: '', report: '/gt/ai-reader/91908/' + __run + '/91908-runner-' + __run + '.json', previews: { '29': '/gt/ai-reader/91908/' + __run + '/current/page-29.jpg' } };   // a real AI reader run, by its run id
+var __lay = (/[?&]layout=(\d+)/.exec(location.search) || [])[1] || '91908', __pgs = ((/[?&]pages=([0-9A-Za-z,_-]+)/.exec(location.search) || [])[1] || '29').split(',');
+if (__run) { var __pv = {}; __pgs.forEach(function (q) { __pv[q] = '/gt/ai-reader/' + __lay + '/' + __run + '/current/page-' + q + '.jpg'; }); window.__aiCheckDemo = { id: __lay, name: 'layout ' + __lay, version: '', report: '/gt/ai-reader/' + __lay + '/' + __run + '/' + __lay + '-runner-' + __run + '.json', previews: __pv }; }   // a real AI reader run: ?airun=<run id>&layout=<id>&pages=18,19,20
 else if (location.search.indexOf('aidemo') >= 0) window.__aiCheckDemo = { id: '91908', name: 'NF1207Riddell', version: '0.16', report: '/gt/ai-reader/91908/ai-test/91908-runner-ai-test.json', previews: { '29': '/gt/ai-reader/91908/ai-test/page-29.jpg' } };   // a hand-written AI read, to test how the page shows one
 else if (location.search.indexOf('demo') >= 0) window.__aiCheckDemo = { id: '91908', name: 'NF1207Riddell', version: '0.4', report: '/gt/2026-09-11-template-fix-job/91908-runner-tplfix-B.json', previews: { '29': '/gt/2026-09-10-review-page-prototype/91908-p29-v0.4.jpg' } };   // 91908 (Observer fixture, internal-only) through the local proxy when served by serve.py
 </script>

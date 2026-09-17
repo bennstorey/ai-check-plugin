@@ -21,7 +21,7 @@
   function fitHeight() { var app = document.querySelector('.aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; fitPage(); }
   // the page box is as wide as its column by default; cap it so the whole page fits the room the preview column has
   // (tabs, zoom bar and legend subtracted), otherwise the bottom of the page is out of view and the zoom centres there
-  function fitPage() { var page = document.getElementById('page'), st = document.querySelector('.aicheck-app .stage'); if (!page || !st || !S.pageSize) return; var room = st.clientHeight - 28; if (room < 120) { page.style.maxWidth = ''; return; } page.style.maxWidth = 'min(100%, ' + Math.floor(room * S.pageSize[0] / S.pageSize[1]) + 'px)'; }   // the stage fills the column (flex); the page box fits inside it, and the zoom uses the stage as its window
+  function fitPage() { var page = document.getElementById('page'), st = document.querySelector('.aicheck-app .stage'); if (!page || !st || !S.pageSize) return; var room = st.clientHeight - 28; if (room < 120) { page.style.maxWidth = ''; return; } var ar = String(page.style.aspectRatio || '').split('/'), w = parseFloat(ar[0]) || S.pageSize[0], h = parseFloat(ar[1]) || S.pageSize[1]; page.style.maxWidth = 'min(100%, ' + Math.floor(room * w / h) + 'px)'; }   // the stage fills the column (flex); the page box fits inside it, and the zoom uses the stage as its window
   // the divider between the columns: drag to resize, double-click to reset; the width is a per-browser convenience
   function initSplitter() {
     var sp = $('aicheck-split'), main = document.querySelector('.aicheck-app main.wrap'); if (!sp || !main) return;
@@ -98,6 +98,7 @@
       fitHeight(); window.addEventListener('resize', fitHeight); setTimeout(fitHeight, 300);
       var bl = $('aicheck-buildline'); if (bl) bl.textContent = 'AI Check plug-in build ' + VERSION;
       initSplitter();
+      document.addEventListener('aicheck:view', function () { fitPage(); });   // the page script says when it shows a different page or spread
       var foot = document.getElementById('foot'); if (foot) { foot.textContent = 'AI Check plug-in ' + VERSION; foot.setAttribute('data-fixed', '1'); }
       $('aicheck-load').onclick = function () { var id = $('aicheck-id').value.trim(); if (id) loadLayout(id); };
       $('aicheck-list').onchange = function () { if (this.value) { $('aicheck-id').value = this.value; loadLayout(this.value); } };
