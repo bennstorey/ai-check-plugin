@@ -44,7 +44,7 @@ def studio_markup(m):
         '<div class="out decide">'
         '  <div class="decide-row"><span class="sum" id="actSum"></span><span class="sum" id="todoSum"></span><span class="sum" id="ignSum"></span></div>'
         '  <div class="decide-row"><button class="btn primary" id="aicheck-send" disabled>Send</button><span id="aicheck-msg" class="appmsg"></span></div>'
-        '  <div class="decide-row hint">Send writes the decisions to the layout and sets its AI check to Fixes approved. The layout must then be checked out and checked in from InDesign for the fixes to apply. Always rules travel with the decisions; their home in the brand knowledge is still to build.</div>'
+        '  <div class="decide-row hint">Send is all you do. The fixes are then applied in the background, usually within a minute, and the result of each one appears at the top of this page. You do not need to open InDesign. (If the layout is open in InDesign, close it first: the fixes wait until it is free.)</div>'
         '  <details class="jobdetails"><summary>Job details</summary>'
         '    <label>Fixes (Actions)<textarea id="actions" readonly spellcheck="false"></textarea></label><button class="btn" id="copyActions">Copy</button>'
         '    <label>Brand rules (Always fix / Always ignore)<textarea id="rules" readonly spellcheck="false"></textarea></label>'

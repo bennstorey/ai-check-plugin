@@ -101,9 +101,24 @@
     props[CFG.actionsField] = JSON.stringify(payload);
     if (acts.length) props[CFG.checkField] = 'Fixes approved';   // nothing to apply → the decisions are recorded, the field stays as it is
     var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '');
-    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' Now open the layout in InDesign (checked out) and check it in: the fixes apply during that check-in.' : ' Nothing to apply, so the AI check field is unchanged.'), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved for the next check-in', 'info'); listInProgress(); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
+    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : ' Nothing to apply, so the AI check field is unchanged.'), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
   }
-  function requestCheck() { var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.obj.MetaData.BasicMetaData.ID, p).then(function () { say('AI check set to “Requested”: it runs at the next check-in of this layout.', 'ok'); listInProgress(); }).catch(function (e) { say('Request failed: ' + e.message, 'err'); }); }
+  // After Send: watch the layout's AI check field until the background pass has applied the fixes, then show what became of each.
+  function waitForFixes(id, what) {
+    var started = Date.now(), tries = 0; if (S.waiting) clearTimeout(S.waiting);
+    (function again() {
+      S.waiting = setTimeout(function () {
+        tries++; callServer('GetObjects', { IDs: [String(id)], Lock: false, Rendition: 'none', RequestInfo: ['MetaData'], __classname__: 'WflGetObjectsRequest' }).then(function (res) {
+          var o = res.Objects[0], field = extraOf(o, CFG.checkField), secs = Math.round((Date.now() - started) / 1000), wm = o.MetaData.WorkflowMetaData;
+          if (String(S.obj.MetaData.BasicMetaData.ID) !== String(id)) return;                       // another layout was loaded meanwhile
+          if (field === 'Fixes applied') { S.obj.MetaData = o.MetaData; showLastPass(o); say('Done: the fixes were applied in the background (now v' + wm.Version + ', ' + secs + ' s). Each result is listed at the top.', 'ok'); listInProgress(); return; }
+          if (secs > 300) { say('Sent ' + what + ', but nothing has applied them after five minutes. Either the background watcher is not running, or the layout is open in InDesign' + (wm.LockedBy ? ' (in use by ' + wm.LockedBy + ')' : '') + '. Closing it, or checking it in from InDesign, applies them.', 'warn'); return; }
+          say('Sent ' + what + '. Applying in the background… ' + secs + ' s' + (wm.LockedBy ? ' (the layout is in use by ' + wm.LockedBy + ': that is normal while the fixes are applied; if it is you in InDesign, close it)' : ''), 'info'); again();
+        }).catch(function () { again(); });
+      }, tries ? 8000 : 4000);
+    })();
+  }
+  function requestCheck() { var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.obj.MetaData.BasicMetaData.ID, p).then(function () { say('AI check requested. The read runs in the background and takes about three minutes; the layout then shows “Checked” in the in-progress list. You do not need to open InDesign.', 'ok'); listInProgress(); }).catch(function (e) { say('Request failed: ' + e.message, 'err'); }); }
   function checkTemplate() { if (!S.templateId) { say('This layout does not name its template.', 'warn'); return; } var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.templateId, p).then(function () { say('AI check set to “Requested” on template ' + S.templateId + ': it runs at the template\'s next check-in.', 'ok'); listInProgress(); }).catch(function (e) { say('Request on the template failed: ' + e.message, 'err'); }); }
 
   ContentStationSdk.registerCustomApp({
