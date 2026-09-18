@@ -13,6 +13,7 @@
     '    <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
     '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
+    '  <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
     '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline"></span></div></details>' +
     '</section>';
 
@@ -44,11 +45,27 @@
     chain.then(function () { sel.innerHTML = '<option value="">' + (rows.length ? 'choose…' : 'none in progress') + '</option>'; rows.forEach(function (o) { var op = document.createElement('option'); op.value = o.ID; op.textContent = o.Name + ' (' + o.ID + ') · ' + (o[CFG.checkField] || ''); sel.appendChild(op); }); });
   }
 
+  // What became of the fixes that were last sent: the check-in scripts write a result per fix back beside the decisions.
+  function showLastPass(o) {
+    var box = $('aicheck-lastpass'); if (!box) return; box.hidden = true; var pj = null; try { pj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e) {}
+    if (!pj || !pj.results || !pj.results.length) return;
+    var okN = pj.results.filter(function (r) { return r.ok; }).length, badN = pj.results.length - okN, when = pj.appliedAt ? new Date(pj.appliedAt) : null;
+    $('aicheck-lastpass-sum').textContent = 'Last fixes sent' + (when && !isNaN(when) ? ' (applied ' + when.toLocaleString() + ')' : '') + ': ' + okN + ' applied' + (badN ? ', ' + badN + ' refused' : ', none refused');
+    box.className = 'lastpass' + (badN ? ' bad' : ''); box.open = badN > 0;
+    var ul = $('aicheck-lastpass-list'); ul.innerHTML = '';
+    pj.results.forEach(function (r) { var li = document.createElement('li'); li.className = r.ok ? 'ok' : 'bad';
+      var what = (r.why || r.op || 'fix') + ' (item ' + (r.frameId || '?') + (r.page ? ', page ' + r.page : '') + ')';
+      var how = r.ok ? ('applied' + (r.now !== undefined && r.now !== null ? ': “' + (r.was || 'no label') + '” → “' + r.now + '”' : '') + (r.note ? '. ' + r.note : '')) : ('refused: ' + (r.reason || 'no reason given'));
+      li.textContent = (r.ok ? '✓ ' : '✗ ') + what + ' — ' + how; ul.appendChild(li); });
+    box.hidden = false;
+  }
+
   function loadLayout(id) {
     say('Loading ' + id + '…');
     return callServer('GetObjects', { IDs: [String(id)], Lock: false, Rendition: 'preview', RequestInfo: ['MetaData', 'Pages', 'Relations'], __classname__: 'WflGetObjectsRequest' }).then(function (res) {
       var o = res.Objects[0]; S.obj = o; var md = o.MetaData;
       $('aicheck-layoutline').textContent = md.BasicMetaData.Name + ' · ' + md.BasicMetaData.Type + ' ' + md.BasicMetaData.ID + ' · v' + md.WorkflowMetaData.Version + ' · status “' + md.WorkflowMetaData.State.Name + '”' + (md.WorkflowMetaData.LockedBy ? ' · in use by ' + md.WorkflowMetaData.LockedBy : '') + ' · AI check: ' + (extraOf(o, CFG.checkField) || 'not requested');
+      showLastPass(o);
       var ptr = extraOf(o, CFG.reportField); S.pointer = null; try { S.pointer = ptr ? JSON.parse(ptr) : null; } catch (e) {}
       $('aicheck-reportline').textContent = S.pointer ? ('Latest run ' + S.pointer.runId + ' at ' + S.pointer.at + ': ' + S.pointer.summary) : 'No report on this layout yet. Request a check, then check the layout in from InDesign.';
       $('aicheck-request').disabled = false;
@@ -112,4 +129,4 @@
   });
   window.__aiCheck = { state: S, version: VERSION, loadLayout: loadLayout };
   // harness demo: window.__aiCheckDemo = { report: url, previews: {pageName: url}, name, version } — builds the page without Studio
-  if (window.__aiCheckDemo) setTimeout(function () { var d = window.__aiCheckDemo; S.obj = { MetaData: { BasicMetaData: { ID: d.id || '0', Name: d.name || 'demo', Type: 'Layout' }, WorkflowMetaData: { Version: d.version || '0', State: { Name: 'demo' } }, ExtraMetaData: [] }, Pages: Object.keys(d.previews || {}).map(function (pn) { return { PageNumber: pn, Files: [{ Rendition: 'preview', FileUrl: d.previews[pn] + '?ww-app=x' }] }; }) }; fetch(d.report).then(function (r) { return r.json(); }).then(buildPage).catch(function (e) { say('demo: ' + e.message, 'err'); }); }, 50);
+  if (window.__aiCheckDemo) setTimeout(function () { var d = window.__aiCheckDemo; S.obj = { MetaData: { BasicMetaData: { ID: d.id || '0', Name: d.name || 'demo', Type: 'Layout' }, WorkflowMetaData: { Version: d.version || '0', State: { Name: 'demo' } }, ExtraMetaData: (d.extra || []) }, Pages: Object.keys(d.previews || {}).map(function (pn) { return { PageNumber: pn, Files: [{ Rendition: 'preview', FileUrl: d.previews[pn] + '?ww-app=x' }] }; }) }; showLastPass(S.obj); fetch(d.report).then(function (r) { return r.json(); }).then(buildPage).catch(function (e) { say('demo: ' + e.message, 'err'); }); }, 50);

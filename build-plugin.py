@@ -87,6 +87,11 @@ STUDIO_CSS = """
 .aicheck-app .jobdetails textarea{width:100%;height:64px;font:400 11px/1.4 "IBM Plex Mono",ui-monospace,Menlo,monospace;background:var(--ground);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px}
 .aicheck-app .foot{padding:4px 24px 8px;color:var(--ink-3);font-size:11px;flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aicheck-app .approw .line{color:var(--ink);font-size:12px}
+.aicheck-app .lastpass{font-size:12.5px;margin:6px 0 2px;padding:6px 10px;border:1px solid var(--line,#d8d8d8);border-left:3px solid #2e7d32;border-radius:6px}
+.aicheck-app .lastpass.bad{border-left-color:#c62828}
+.aicheck-app .lastpass summary{cursor:pointer;font-weight:600}
+.aicheck-app .lastpass ul{margin:6px 0 2px;padding-left:4px;list-style:none;max-height:180px;overflow:auto}
+.aicheck-app .lastpass li{margin:2px 0}.aicheck-app .lastpass li.bad{color:#c62828}
 .aicheck-app .appdetails{font-size:12px;color:var(--ink-3)}
 .aicheck-app .appdetails summary{cursor:pointer}
 .aicheck-app .appdetails .approw{margin-top:4px}
