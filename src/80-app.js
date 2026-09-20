@@ -14,6 +14,7 @@
     '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
     '  <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
+    '  <details class="appdetails" id="aicheck-workedto" hidden><summary>What this check worked to</summary><div id="aicheck-workedto-body"></div></details>' +
     '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline"></span></div></details>' +
     '</section>';
 
@@ -76,6 +77,27 @@
     }).catch(function (e) { say(e.message, 'err'); });
   }
 
+  // What the check worked to — the style guide, the reader's brief, the section's house notes and tolerances, and where
+  // its measurements came from. Read-only for now (settings tab, slice 1 — Benn, 2026-09-20).
+  function renderWorkedTo(w) {
+    var box = document.getElementById('aicheck-workedto'), body = document.getElementById('aicheck-workedto-body');
+    if (!box || !body) return;
+    if (!w) { box.hidden = true; return; }
+    function esc(t) { return String(t == null ? '' : t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+    function row(label, value) { return '<div class="approw"><span class="line"><b>' + esc(label) + ':</b> ' + esc(value) + '</span></div>'; }
+    var html = row('Style guide', w.styleGuide) + row('Reader\'s brief', w.brief);
+    if (w.houseNotes && w.houseNotes.length) {
+      html += '<div class="approw"><span class="line"><b>House notes in force:</b></span></div><ul>';
+      w.houseNotes.forEach(function (n) { html += '<li>' + esc(n.says) + (n.from ? ' <i>(' + esc(n.from) + ', ' + esc(n.on) + ')</i>' : '') + '</li>'; });
+      html += '</ul>';
+    } else html += row('House notes in force', 'none for this section');
+    html += (w.tolerances && w.tolerances.length) ? row('Tolerances', w.tolerances.join('; ')) : row('Tolerances', w.tolerancesNote || 'none set');
+    html += row('Earlier versions', w.history) + row('Measurements', w.measurements);
+    if (w.inUseOnThisLayout) html += row('In use on this layout', w.inUseOnThisLayout.paragraphStyles + ' paragraph styles, ' + w.inUseOnThisLayout.colours + ' colours');
+    html += row('Read by', w.model + (w.effort ? ' at ' + w.effort + ' effort' : '') + (w.readAt ? ' on ' + w.readAt : ''));
+    body.innerHTML = html; box.hidden = false;
+  }
+
   function buildPage(report) {
     S.report = report; var images = {};
     (S.obj.Pages || []).forEach(function (p) { var f = (p.Files || []).filter(function (x) { return x.Rendition === 'preview'; })[0]; if (f && f.FileUrl) images[String(p.PageNumber)] = withWwApp(f.FileUrl); });
@@ -87,6 +109,7 @@
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
     S.review = window.bootReview(D); S.pageSize = D.pageSize;
     fitPage(); if (window.ResizeObserver && !S.ro) { S.ro = new ResizeObserver(function () { fitPage(); }); S.ro.observe(document.querySelector('.aicheck-app .viewer')); }
+    renderWorkedTo(report.workedTo);
     $('aicheck-send').disabled = false;
     say('Loaded. Choose an action on each finding, decide the labels, then Send.', 'ok');
   }
