@@ -14,7 +14,7 @@
     '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
     '  <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
-    '  <details class="appdetails" id="aicheck-workedto" hidden><summary>What this check worked to</summary><div id="aicheck-workedto-body"></div></details>' +
+    '  <details class="appdetails" id="aicheck-workedto"><summary>What this check worked to</summary><div id="aicheck-workedto-body"></div></details>' +
     '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline"></span></div></details>' +
     '</section>';
 
@@ -82,7 +82,7 @@
   function renderWorkedTo(w) {
     var box = document.getElementById('aicheck-workedto'), body = document.getElementById('aicheck-workedto-body');
     if (!box || !body) return;
-    if (!w) { box.hidden = true; return; }
+    if (!w) { body.innerHTML = '<div class="approw"><span class="line">This report was made before the check recorded what it worked to. Request a new check to see it.</span></div>'; box.hidden = false; return; }
     function esc(t) { return String(t == null ? '' : t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
     function row(label, value) { return '<div class="approw"><span class="line"><b>' + esc(label) + ':</b> ' + esc(value) + '</span></div>'; }
     var html = row('Style guide', w.styleGuide) + row('Reader\'s brief', w.brief);
