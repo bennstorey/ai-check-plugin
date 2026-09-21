@@ -2,6 +2,7 @@
 <!doctype html><html><head><meta charset="utf-8"><title>AI Check plug-in — stub harness</title>
 <style>html,body{margin:0;height:100%;font-family:system-ui}#host{height:calc(100vh - 48px);border-top:48px solid #2a3340;box-sizing:border-box}</style></head><body>
 <div id="host"></div>
+<script src="/gt/ai-reader/91908/verify/ba-results.json"></script>
 <script>
 // Minimal stand-in for the Content Station SDK: renders the app content, calls onInit, logs the rest.
 window.ContentStationSdk = {
@@ -15,8 +16,23 @@ var __lay = (/[?&]layout=(\d+)/.exec(location.search) || [])[1] || '91908', __pg
 var __lastpass = location.search.indexOf('lastpass') >= 0 ? [{ Property: 'C_AI_ACTIONS', Values: [JSON.stringify({ actions: [], appliedAt: '2026-09-18T06:33:56Z', results: [
   { op: 'ApplyElementLabel', frameId: 39420, page: '23', ok: true, why: '1 frame should be labelled PC Picture Caption', was: 'TX Body Text', now: 'PC Picture Caption' },
   { op: 'ApplyElementLabel', frameId: 38868, page: '21', ok: false, why: 'Turn arrow should not be labelled a picture frame', reason: 'a group cannot carry an element label and this one holds 2 items (38870, 38869) — name the one to label' }] })] }] : [];
+// ?lastpass2 — the same fixes sent a second time: one was applied in an earlier round, one had nothing left to do, one
+// is a genuine refusal. Checks that a repeat send reads as done rather than failed (2026-09-20).
+if (location.search.indexOf('lastpass2') >= 0) __lastpass = [{ Property: 'C_AI_ACTIONS', Values: [JSON.stringify({ actions: [], appliedAt: '2026-09-20T19:12:00Z',
+  rounds: [
+    { runId: 'ev-1', at: '2026-09-20T18:45:00Z', beforeVersion: '0.3', results: [
+      { op: 'SnapToGrid', frameId: 1913815, page: '8', ok: true, why: "Byline sits on top of the story's first line" }] },
+    { runId: 'ev-2', at: '2026-09-20T19:12:00Z', beforeVersion: '0.4', results: [
+      { op: 'SnapToGrid', frameId: 1913815, page: '8', ok: false, why: "Byline sits on top of the story's first line", reason: 'the frame is no longer where the report saw it — refused' },
+      { op: 'ResetTextRange', frameId: 4791, page: '8', ok: false, why: 'Standfirst colour', reason: 'the range already carries the style\'s colour and tint — nothing to reset' },
+      { op: 'MoveInsideTypeArea', frameId: 9999, page: '8', ok: false, why: 'Something genuinely wrong', reason: 'no such frame' }] }],
+  results: [
+    { op: 'SnapToGrid', frameId: 1913815, page: '8', ok: false, why: "Byline sits on top of the story's first line", reason: 'the frame is no longer where the report saw it — refused' },
+    { op: 'ResetTextRange', frameId: 4791, page: '8', ok: false, why: 'Standfirst colour', reason: 'the range already carries the style\'s colour and tint — nothing to reset' },
+    { op: 'MoveInsideTypeArea', frameId: 9999, page: '8', ok: false, why: 'Something genuinely wrong', reason: 'no such frame' }] })] }];
 if (__run) { var __pv = {}; __pgs.forEach(function (q) { __pv[q] = '/gt/ai-reader/' + __lay + '/' + __run + '/current/page-' + q + '.jpg'; }); window.__aiCheckDemo = { extra: __lastpass, id: __lay, name: 'layout ' + __lay, version: '', report: '/gt/ai-reader/' + __lay + '/' + __run + '/' + __lay + '-runner-' + __run + '.json', previews: __pv }; }   // a real AI reader run: ?airun=<run id>&layout=<id>&pages=18,19,20
 else if (location.search.indexOf('aidemo') >= 0) window.__aiCheckDemo = { id: (new URLSearchParams(location.search).get('layout') || ''), name: 'Demo layout', version: '0.16', report: '/gt/ai-reader/91908/ai-test/91908-runner-ai-test.json', previews: { '29': '/gt/ai-reader/91908/ai-test/page-29.jpg' } };   // a hand-written AI read, to test how the page shows one
+if (location.search.indexOf('bademo') >= 0) { var __r=(/[?&]airun=([A-Za-z0-9T-]+Z?)/.exec(location.search)||[])[1], __l=(/[?&]layout=(\d+)/.exec(location.search)||[])[1], __p=(/[?&]page=([0-9A-Za-z_-]+)/.exec(location.search)||[])[1], __res=(/[?&]results=([^&]+)/.exec(location.search)||[])[1]; window.__aiCheckDemo = { ba: { name: 'demo layout', page: __p, pageSize: [820,1020], before: '/gt/ai-reader/'+__l+'/'+__r+'/current/page-'+__p+'.jpg', after: '/gt/ai-reader/'+__l+'/verify/now/page-'+__p+'.jpg', report: '/gt/ai-reader/'+__l+'/'+__r+'/'+__l+'-runner-'+__r+'.json', results: window.__baResults || null, versions: 'before: the version the check read · after: now', sub: 'test data from this Mac' } }; }
 else if (location.search.indexOf('demo') >= 0) window.__aiCheckDemo = { id: (new URLSearchParams(location.search).get('layout') || ''), name: 'Demo layout', version: '0.4', report: '/gt/2026-09-11-template-fix-job/91908-runner-tplfix-B.json', previews: { '29': '/gt/2026-09-10-review-page-prototype/91908-p29-v0.4.jpg' } };   // a lab fixture through the local proxy when served by serve.py (client names are never written into this file: it is published)
 </script>
 <script src="dist/ai-check-plugin.js"></script>

@@ -61,13 +61,26 @@ def studio_markup(m):
 STUDIO_CSS = """
 .aicheck-app .wrap[hidden]{display:none}
 .aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden}
-.aicheck-app .apppanel{margin:8px 12px 0;padding:8px 12px;display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.aicheck-app .apppanel{margin:0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex:0 0 auto;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}
+.aicheck-app [hidden]{display:none!important}   /* panels are display:flex, which otherwise beats the hidden attribute */
+.aicheck-app main.wrap.nowork{grid-template-columns:1fr}
+/* the empty state, from the design (Figma 2015:4): the picker on its band, one card centred in the room below */
+.aicheck-app .apppanel{background:var(--ground)}
+.aicheck-app .emptystate{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.aicheck-app .es-card{max-width:480px;width:100%;background:var(--ground);border:1px solid var(--line);border-radius:12px;padding:28px 30px;text-align:center}
+.aicheck-app .es-icon{width:58px;height:58px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.aicheck-app .es-card h3{margin:0 0 8px;font-size:17px;font-weight:600;color:var(--ink)}
+.aicheck-app .es-card p{margin:0 auto 18px;max-width:400px;color:var(--ink-2);font-size:13px;line-height:1.5}
+.aicheck-app .es-steps{list-style:none;margin:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:10px}
+.aicheck-app .es-steps li{display:flex;gap:10px;align-items:flex-start;color:var(--ink-2);font-size:13px;line-height:1.45}
+.aicheck-app .es-steps span{flex:0 0 22px;height:22px;border-radius:50%;background:var(--line-2);color:var(--ink-2);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:600}
+.aicheck-app main.wrap.nowork>section.panel[aria-label="Findings"]{border:0;background:transparent}
 .aicheck-app .approw{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
 .aicheck-app .approw label{display:inline-flex;gap:6px;align-items:center}
 .aicheck-app .approw input,.aicheck-app .approw select{border:1px solid var(--line);background:var(--ground);color:var(--ink);border-radius:4px;padding:4px 8px;font-size:13px;max-width:260px}
 .aicheck-app .appmsg{padding:3px 8px;border-radius:4px;font-size:13px}
 .aicheck-app .appmsg.ok{background:var(--accent-soft);color:var(--accent)} .aicheck-app .appmsg.warn{background:var(--warn-soft);color:var(--warn)} .aicheck-app .appmsg.err{background:var(--block-soft);color:var(--block)}
-.aicheck-app .top.compact{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:6px 24px 0;border:0;background:transparent;flex:0 0 auto}
+.aicheck-app .top.compact{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;flex:0 0 auto}
 .aicheck-app .top.compact .ttl{font-weight:600;font-size:15px}
 .aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 8px 1fr;grid-template-rows:minmax(0,1fr);gap:8px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
 .aicheck-app .splitter{cursor:col-resize;background:var(--line);border-radius:4px;align-self:stretch;touch-action:none}
@@ -87,11 +100,14 @@ STUDIO_CSS = """
 .aicheck-app .jobdetails textarea{width:100%;height:64px;font:400 11px/1.4 "IBM Plex Mono",ui-monospace,Menlo,monospace;background:var(--ground);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px}
 .aicheck-app .foot{padding:4px 24px 8px;color:var(--ink-3);font-size:11px;flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aicheck-app .approw .line{color:var(--ink);font-size:12px}
-.aicheck-app .lastpass{font-size:12.5px;margin:6px 0 2px;padding:6px 10px;border:1px solid var(--line,#d8d8d8);border-left:3px solid #2e7d32;border-radius:6px}
-.aicheck-app .lastpass.bad{border-left-color:#c62828}
+/* the design's amber banner (Figma 2004:338): one notice, not a bordered fold */
+.aicheck-app .lastpass{font-size:12.5px;margin:8px 0 4px;padding:9px 12px;background:var(--banner,#FFFBEB);border:1px solid var(--banner-line,#FDE68A);border-radius:8px}
+.aicheck-app .lastpass summary{color:#92400E}
+.aicheck-app .lastpass.bad{background:#FEF2F2;border-color:#FECACA}
+.aicheck-app .lastpass.bad summary{color:#991B1B}
 .aicheck-app .lastpass summary{cursor:pointer;font-weight:600}
 .aicheck-app .lastpass ul{margin:6px 0 2px;padding-left:4px;list-style:none;max-height:180px;overflow:auto}
-.aicheck-app .lastpass li{margin:2px 0}.aicheck-app .lastpass li.bad{color:#c62828}
+.aicheck-app .lastpass li{margin:2px 0}.aicheck-app .lastpass li.bad{color:#c62828}.aicheck-app .lastpass li.again{color:var(--ink-3,#6b6b6b)}
 .aicheck-app .appdetails{font-size:12px;color:var(--ink-3)}
 .aicheck-app .appdetails summary{cursor:pointer}
 .aicheck-app .appdetails .approw{margin-top:4px}

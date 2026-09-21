@@ -2,7 +2,7 @@
   var CFG = { checkField: 'C_AI_CHECK', actionsField: 'C_AI_ACTIONS', reportField: 'C_AI_REPORT', localReports: 'http://localhost:8765' };
   var S = { obj: null, report: null, pointer: null, review: null };
   var $ = function (id) { return document.getElementById(id); };
-  function say(msg, kind) { var main = document.querySelector('.aicheck-app main.wrap'); var e = (main && !main.hidden) ? $('aicheck-msg') : $('aicheck-msg0'); if (!e) e = $('aicheck-msg0') || $('aicheck-msg'); if (e) { e.textContent = msg; e.className = 'appmsg ' + (kind || ''); } var other = (e && e.id === 'aicheck-msg') ? $('aicheck-msg0') : $('aicheck-msg'); if (other) { other.textContent = ''; other.className = 'appmsg'; } }
+  function say(msg, kind) { var e = $('aicheck-msg0'); if (!e) e = $('aicheck-msg0') || $('aicheck-msg'); if (e) { e.textContent = msg; e.className = 'appmsg ' + (kind || ''); } var other = (e && e.id === 'aicheck-msg') ? $('aicheck-msg0') : $('aicheck-msg'); if (other) { other.textContent = ''; other.className = 'appmsg'; } }
 
   var PICKER = '' +
     '<section class="panel apppanel" id="aicheck-picker">' +
@@ -11,11 +11,11 @@
     '    <label>in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
     '    <button class="btn" id="aicheck-request" disabled>Request a check</button>' +
     '    <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
-    '    <label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
     '  <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
     '  <details class="appdetails" id="aicheck-workedto"><summary>What this check worked to</summary><div id="aicheck-workedto-body"></div></details>' +
-    '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline"></span></div></details>' +
+    '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline"></span></div>' +
+    '    <div class="approw"><label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label> <span class="line">for development: show a report from a file on this Mac, without Studio</span></div></details>' +
     '</section>';
 
   // Studio does not tell the page how tall its container is: measure the room below the app's top edge, so the
@@ -50,18 +50,45 @@
   function showLastPass(o) {
     var box = $('aicheck-lastpass'); if (!box) return; box.hidden = true; var pj = null; try { pj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e) {}
     if (!pj || !pj.results || !pj.results.length) return;
-    var okN = pj.results.filter(function (r) { return r.ok; }).length, badN = pj.results.length - okN, when = pj.appliedAt ? new Date(pj.appliedAt) : null;
-    $('aicheck-lastpass-sum').textContent = 'Last fixes sent' + (when && !isNaN(when) ? ' (applied ' + when.toLocaleString() + ')' : '') + ': ' + okN + ' applied' + (badN ? ', ' + badN + ' refused' : ', none refused');
+    // A fix sent twice is not a failure. The tools' guards refuse the second attempt because the page is already the way
+    // the fix wanted it — the frame has moved since the report, the colour is already the style's — and that came out in
+    // red beside a genuine refusal (Benn, 2026-09-20). Where an EARLIER ROUND applied the same op to the same item, or
+    // the tool itself says there was nothing left to do, it is reported as done, not refused.
+    var earlier = {};
+    (pj.rounds || []).slice(0, -1).forEach(function (rd, i) {
+      ((rd && rd.results) || []).forEach(function (r) { if (r.ok) earlier[(r.op || '') + '|' + (r.frameId || '')] = { round: i + 1, at: rd.at || null }; });
+    });
+    var NOTHING_LEFT = /nothing to reset|nothing to change|already carries|already at|is already/i;
+    function standing(r) {                      // 'done' | 'refused'
+      if (r.ok) return 'done';
+      var had = earlier[(r.op || '') + '|' + (r.frameId || '')];
+      if (had) return 'done';
+      return NOTHING_LEFT.test(r.reason || '') ? 'done' : 'refused';
+    }
+    var okN = 0, againN = 0, badN = 0;
+    pj.results.forEach(function (r) { var st = standing(r); if (r.ok) okN++; else if (st === 'done') againN++; else badN++; });
+    var when = pj.appliedAt ? new Date(pj.appliedAt) : null;
+    $('aicheck-lastpass-sum').textContent = 'Last fixes sent' + (when && !isNaN(when) ? ' (applied ' + when.toLocaleString() + ')' : '') + ': ' + okN + ' applied'
+      + (againN ? ', ' + againN + ' already done' : '') + (badN ? ', ' + badN + ' refused' : (againN ? '' : ', none refused'));
     box.className = 'lastpass' + (badN ? ' bad' : ''); box.open = badN > 0;
     var ul = $('aicheck-lastpass-list'); ul.innerHTML = '';
-    pj.results.forEach(function (r) { var li = document.createElement('li'); li.className = r.ok ? 'ok' : 'bad';
+    pj.results.forEach(function (r) { var st = standing(r), li = document.createElement('li'); li.className = r.ok ? 'ok' : (st === 'done' ? 'again' : 'bad');
       var what = (r.why || r.op || 'fix') + ' (item ' + (r.frameId || '?') + (r.page ? ', page ' + r.page : '') + ')';
-      var how = r.ok ? ('applied' + (r.now !== undefined && r.now !== null ? ': “' + (r.was || 'no label') + '” → “' + r.now + '”' : '') + (r.note ? '. ' + r.note : '')) : ('refused: ' + (r.reason || 'no reason given'));
-      li.textContent = (r.ok ? '✓ ' : '✗ ') + what + ' — ' + how; ul.appendChild(li); });
+      var had = earlier[(r.op || '') + '|' + (r.frameId || '')];
+      var how = r.ok ? ('applied' + (r.now !== undefined && r.now !== null ? ': “' + (r.was || 'no label') + '” → “' + r.now + '”' : '') + (r.note ? '. ' + r.note : ''))
+              : (st === 'done' ? ('already done' + (had ? ' — applied in an earlier round' + (had.at ? ' (' + new Date(had.at).toLocaleString() + ')' : '') : ' — the page is already the way this fix wanted it') + '. Nothing to do.')
+                               : ('refused: ' + (r.reason || 'no reason given')));
+      li.textContent = (r.ok ? '✓ ' : (st === 'done' ? '• ' : '✗ ')) + what + ' — ' + how;
+      if (st === 'done' && !r.ok && r.reason) li.title = 'What the tool said: ' + r.reason;
+      ul.appendChild(li); });
     box.hidden = false;
   }
 
+  // ONE current layout for the whole plug-in (Benn, 2026-09-21: switching in one tab left the other on the old layout).
+  // Whichever tab loads it, it becomes current; the other tab catches up when it is next shown.
   function loadLayout(id) {
+    S.currentId = String(id); if ($('aicheck-id')) $('aicheck-id').value = String(id);
+    var baShown = document.getElementById('aicheck-view-ba'); if (baShown && !baShown.hidden && window.AICheckBeforeAfter) window.AICheckBeforeAfter.load(String(id));
     say('Loading ' + id + '…');
     return callServer('GetObjects', { IDs: [String(id)], Lock: false, Rendition: 'preview', RequestInfo: ['MetaData', 'Pages', 'Relations'], __classname__: 'WflGetObjectsRequest' }).then(function (res) {
       var o = res.Objects[0]; S.obj = o; var md = o.MetaData;
@@ -72,7 +99,10 @@
       $('aicheck-request').disabled = false;
       S.templateId = (md.BasicMetaData.Type === 'Layout' && /^\d+$/.test(extraOf(o, 'C_LAYOUT_TEMPLATE_ID'))) ? extraOf(o, 'C_LAYOUT_TEMPLATE_ID') : null;
       $('aicheck-checktpl').disabled = !S.templateId; $('aicheck-checktpl').title = S.templateId ? REVIEW_TIPS.checkTemplate : 'This layout does not name its template (no template ID property).';
-      if (S.pointer && S.pointer.file) return fetch(CFG.localReports + '/localreport?path=' + encodeURIComponent(S.pointer.file), { mode: 'cors' }).then(function (r) { if (!r.ok) throw new Error('local report ' + r.status); return r.json(); }).then(buildPage).catch(function (e) { say('Layout loaded. The report file is not reachable from here (' + e.message + '): load it from a file.', 'warn'); });
+      if (S.pointer && S.pointer.file) return fetch(CFG.localReports + '/localreport?path=' + encodeURIComponent(S.pointer.file), { mode: 'cors' }).then(function (r) { if (!r.ok) throw new Error('local report ' + r.status); return r.json(); }).then(function (rep) {
+        // a report that arrived but could not be drawn is OUR fault, not "unreachable" — say which (2026-09-21)
+        try { buildPage(rep); } catch (eDraw) { say('The report for ' + id + ' arrived but the page could not draw it: ' + eDraw.message + '. This is a fault in the plug-in, not in the layout.', 'err'); if (window.console) console.error(eDraw); }
+      }, function (e) { say('Layout loaded. The report file is not reachable from here (' + e.message + '): load it from a file.', 'warn'); });
       say('Layout loaded.', 'ok');
     }).catch(function (e) { say(e.message, 'err'); });
   }
@@ -104,7 +134,7 @@
     var D = ReviewEnrich.buildData(report, images, 'Report ' + report.runId + ' on ' + S.obj.MetaData.BasicMetaData.Name + ' v' + S.obj.MetaData.WorkflowMetaData.Version + '; previews from Studio at that version.');
     if (!D.layout.template) { var tid = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_ID'), tnm = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_NAME'); if (tid || tnm) D.layout.template = { id: tid || null, name: tnm || null }; }
     var pub = S.obj.MetaData.BasicMetaData.Publication; D.layout.brand = (pub && pub.Name) || null;   // an "always" rule is scoped to the brand
-    var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = false;
+    if (window.__aiCheckShowWork) window.__aiCheckShowWork(true);
     fitHeight();
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
     S.review = window.bootReview(D); S.pageSize = D.pageSize;
@@ -117,13 +147,18 @@
   // who is deciding: the SDK's info block — field names untested on this server, so every shape is tried and '' is the fallback
   function whoAmI() { try { var i = ContentStationSdk.getInfo() || {}; var u = i.User || i.user || {}; return u.FullName || u.UserName || u.Name || i.UserName || i.FullName || i.User || ''; } catch (e) { return ''; } }
   function send() {
-    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [];
+    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [], houseNotes = out.houseNotes || [];
     var labelsDecided = Object.keys(out.labels || {}).filter(function (k) { return out.labels[k]; }).length;
-    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided) { say('No decisions yet.', 'warn'); return; }
-    var payload = { runId: S.report.runId, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos }, props = {};
+    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided && !houseNotes.length) { say('No decisions yet.', 'warn'); return; }
+    var payload = { runId: S.report.runId, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos,
+      // kept, not ignored: these go into the section's house notes, which is what the next check works to
+      houseNotes: houseNotes.map(function (h) { return { says: h.says, from: whoAmI(), on: new Date().toISOString().slice(0, 10), fromLayout: S.obj.MetaData.BasicMetaData.ID }; }) }, props = {};
+    // Carry the rounds already applied to this layout forward: this field is written whole, so building a fresh payload
+    // used to erase everything that had been applied before (2026-09-20). The runner appends this round to the list.
+    try { var prior = JSON.parse(extraOf(S.obj, CFG.actionsField) || '{}'); if (prior.rounds && prior.rounds.length) payload.rounds = prior.rounds; } catch (e) {}
     props[CFG.actionsField] = JSON.stringify(payload);
     if (acts.length) props[CFG.checkField] = 'Fixes approved';   // nothing to apply → the decisions are recorded, the field stays as it is
-    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '');
+    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '');
     say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : ' Nothing to apply, so the AI check field is unchanged.'), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
   }
   // After Send: watch the layout's AI check field until the background pass has applied the fixes, then show what became of each.
@@ -146,10 +181,31 @@
 
   ContentStationSdk.registerCustomApp({
     name: 'ai-check', title: 'AI Check',
-    content: '<div class="aicheck-app" data-theme="light">' + PICKER + PAGE_HTML + '</div>',
+    content: '<div class="aicheck-tabs"><button class="aicheck-tab" id="aicheck-tab-check" aria-pressed="true">Check</button><button class="aicheck-tab" id="aicheck-tab-ba" aria-pressed="false">Before &amp; after</button></div>' + '<div id="aicheck-view-check"><div class="aicheck-app" data-theme="light">' + PICKER + PAGE_HTML + '</div></div>' + '<div id="aicheck-view-ba" hidden></div>',
     onInit: function () {
       if (!document.getElementById('aicheck-style')) { var st = document.createElement('style'); st.id = 'aicheck-style'; st.textContent = PAGE_CSS; document.head.appendChild(st); }
-      var main = document.querySelector('.aicheck-app main.wrap'); if (main) main.hidden = true;
+      var main = document.querySelector('.aicheck-app main.wrap');
+      var side = document.querySelector('.aicheck-app main.wrap > section.panel[aria-label="Findings"]');
+      var picker = $('aicheck-picker'), topc = document.querySelector('.aicheck-app .top.compact');
+      if (side && picker) { side.insertBefore(picker, side.firstChild); if (topc) side.insertBefore(topc, picker.nextSibling); }
+      // Nothing loaded yet: the design's card, so the app says what it is and what happens next (Figma 2015:4)
+      var empty = document.createElement('div'); empty.className = 'emptystate'; empty.id = 'aicheck-empty';
+      empty.innerHTML = '<div class="es-card">' +
+        '<div class="es-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="14" y="13" width="7" height="8" rx="1.5"></rect></svg></div>' +
+        '<h3>No layout loaded</h3>' +
+        '<p>Type a layout or template ID and press Load, or pick one from “in progress” above.</p>' +
+        '<ol class="es-steps"><li><span>1</span>Load the layout you are working on</li>' +
+        '<li><span>2</span>Read what the check found, and decide each one</li>' +
+        '<li><span>3</span>Press Send — the fixes are applied in the background, without opening InDesign</li></ol></div>';
+      if (side) side.appendChild(empty);
+      // main.wrap now holds the picker, so it can never be hidden: the viewer and the list hide instead until a layout loads
+      var viewer = document.querySelector('.aicheck-app main.wrap > section.viewer');
+      function showWork(on) { if (viewer) viewer.hidden = !on; var es = $('aicheck-empty'); if (es) es.hidden = on; var sp = $('aicheck-split'); if (sp) sp.hidden = !on;
+        ['aicheck-groups-host', 'toolbar', 'groups'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = !on; });
+        var tb = document.querySelector('.aicheck-app .toolbar'), out = document.querySelector('.aicheck-app .out'); if (tb) tb.hidden = !on; if (out) out.hidden = !on;
+        if (topc) topc.hidden = !on;
+        if (main) main.classList.toggle('nowork', !on); }
+      window.__aiCheckShowWork = showWork; showWork(false);
       fitHeight(); window.addEventListener('resize', fitHeight); setTimeout(fitHeight, 300);
       var bl = $('aicheck-buildline'); if (bl) bl.textContent = 'AI Check plug-in build ' + VERSION;
       initSplitter();
@@ -161,10 +217,39 @@
       $('aicheck-request').onclick = requestCheck; $('aicheck-request').title = REVIEW_TIPS.request;
       $('aicheck-checktpl').onclick = checkTemplate; $('aicheck-checktpl').title = REVIEW_TIPS.checkTemplate;
       $('aicheck-send').onclick = send; $('aicheck-send').title = REVIEW_TIPS.send;
+      // the second view: its own full screen, a tab away (Benn, 2026-09-20)
+      var baHost = document.getElementById('aicheck-view-ba');
+      if (baHost && window.AICheckBeforeAfter) { baHost.innerHTML = window.AICheckBeforeAfter.html; window.AICheckBeforeAfter.init(); }
+      if (!document.getElementById('aicheck-tabstyle')) {
+        var ts = document.createElement('style'); ts.id = 'aicheck-tabstyle';
+        ts.textContent = '.aicheck-tabs{display:flex;gap:2px;background:#151a20;padding:6px 8px 0}' +
+          '.aicheck-tab{background:#222933;border:1px solid #39424e;border-bottom:0;color:#cfd6de;padding:6px 16px;border-radius:6px 6px 0 0;cursor:pointer;font:13px system-ui,sans-serif}' +
+          '.aicheck-tab[aria-pressed="true"]{background:#fff;color:#20242a;font-weight:500}' +
+          '#aicheck-view-ba{position:relative;height:calc(100vh - 46px)}';   // a first guess; refit() measures the real room
+        document.head.appendChild(ts);
+      }
+      function showView(which) {
+        var c = document.getElementById('aicheck-view-check'), b = document.getElementById('aicheck-view-ba');
+        c.hidden = (which !== 'check'); b.hidden = (which !== 'ba');
+        $('aicheck-tab-check').setAttribute('aria-pressed', String(which === 'check'));
+        $('aicheck-tab-ba').setAttribute('aria-pressed', String(which === 'ba'));
+        if (which === 'ba' && window.AICheckBeforeAfter) {
+          window.AICheckBeforeAfter.refit();
+          // compare with the layout the view actually SHOWS, not with the text in its box
+          var id = S.currentId || (S.obj && String(S.obj.MetaData.BasicMetaData.ID)) || $('aicheck-id').value.trim();
+          if (id && window.AICheckBeforeAfter.shownId() !== String(id)) window.AICheckBeforeAfter.load(String(id));
+        } else {
+          fitHeight();
+          if (S.currentId && (!S.obj || String(S.obj.MetaData.BasicMetaData.ID) !== S.currentId)) loadLayout(S.currentId);   // loaded in the other tab
+        }
+      }
+      $('aicheck-tab-check').onclick = function () { showView('check'); };
+      $('aicheck-tab-ba').onclick = function () { showView('ba'); };
       listInProgress();
     },
     buttons: [{ label: 'Reload', type: 'secondary', callback: function () { if (S.obj) loadLayout(S.obj.MetaData.BasicMetaData.ID); listInProgress(); } }]
   });
   window.__aiCheck = { state: S, version: VERSION, loadLayout: loadLayout };
+  window.__aiCheckSetCurrent = function (id) { S.currentId = String(id); if ($('aicheck-id')) $('aicheck-id').value = String(id); };
   // harness demo: window.__aiCheckDemo = { report: url, previews: {pageName: url}, name, version } — builds the page without Studio
   if (window.__aiCheckDemo) setTimeout(function () { var d = window.__aiCheckDemo; S.obj = { MetaData: { BasicMetaData: { ID: d.id || '0', Name: d.name || 'demo', Type: 'Layout' }, WorkflowMetaData: { Version: d.version || '0', State: { Name: 'demo' } }, ExtraMetaData: (d.extra || []) }, Pages: Object.keys(d.previews || {}).map(function (pn) { return { PageNumber: pn, Files: [{ Rendition: 'preview', FileUrl: d.previews[pn] + '?ww-app=x' }] }; }) }; showLastPass(S.obj); fetch(d.report).then(function (r) { return r.json(); }).then(buildPage).catch(function (e) { say('demo: ' + e.message, 'err'); }); }, 50);
