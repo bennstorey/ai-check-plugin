@@ -166,19 +166,28 @@
   // who is deciding: the SDK's info block — field names untested on this server, so every shape is tried and '' is the fallback
   function whoAmI() { try { var i = ContentStationSdk.getInfo() || {}; var u = i.User || i.user || {}; return u.FullName || u.UserName || u.Name || i.UserName || i.FullName || i.User || ''; } catch (e) { return ''; } }
   function send() {
-    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [], houseNotes = out.houseNotes || [];
+    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [], houseNotes = out.houseNotes || [], corrections = out.corrections || [];
     var labelsDecided = Object.keys(out.labels || {}).filter(function (k) { return out.labels[k]; }).length;
-    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided && !houseNotes.length) { say('No decisions yet.', 'warn'); return; }
-    var payload = { runId: S.report.runId, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos,
+    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided && !houseNotes.length && !corrections.length) { say('No decisions yet.', 'warn'); return; }
+    // which section's knowledge a house note belongs to: the guide the check worked to (its name, without the caveat a
+    // guide chosen by page size alone carries in older reports)
+    var sg = (S.report.workedTo || {}).styleGuide, sgName = sg ? (typeof sg === 'string' ? sg.split(' (')[0] : (sg.name || null)) : null;
+    var payload = { runId: S.report.runId, styleGuide: sgName, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos,
       // kept, not ignored: these go into the section's house notes, which is what the next check works to
-      houseNotes: houseNotes.map(function (h) { return { says: h.says, from: whoAmI(), on: new Date().toISOString().slice(0, 10), fromLayout: S.obj.MetaData.BasicMetaData.ID }; }) }, props = {};
+      houseNotes: houseNotes.map(function (h) { return { says: h.says, kind: h.kind || 'keep', from: whoAmI(), on: new Date().toISOString().slice(0, 10), fromLayout: S.obj.MetaData.BasicMetaData.ID }; }),
+      // where a person overruled the AI reader: who, when, on which version (Benn, 2026-09-22)
+      corrections: corrections.map(function (c) { var x = {}; for (var k in c) x[k] = c[k]; x.by = whoAmI(); x.at = new Date().toISOString(); x.layout = S.obj.MetaData.BasicMetaData.ID; x.version = S.obj.MetaData.WorkflowMetaData.Version; x.runId = S.report.runId; return x; }) }, props = {};
     // Carry the rounds already applied to this layout forward: this field is written whole, so building a fresh payload
     // used to erase everything that had been applied before (2026-09-20). The runner appends this round to the list.
     try { var prior = JSON.parse(extraOf(S.obj, CFG.actionsField) || '{}'); if (prior.rounds && prior.rounds.length) payload.rounds = prior.rounds; } catch (e) {}
     props[CFG.actionsField] = JSON.stringify(payload);
-    if (acts.length) props[CFG.checkField] = 'Fixes approved';   // nothing to apply → the decisions are recorded, the field stays as it is
-    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '');
-    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : ' Nothing to apply, so the AI check field is unchanged.'), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
+    // Fixes, house notes and corrections all need the background watcher: fixes to apply them, notes and corrections to write
+    // them into the section's knowledge. With nothing to apply, the watcher records them and puts the field back to Checked
+    // without making a new version (2026-09-22: a note sent on its own used to sit in the field and never reach the section).
+    var forWatcher = acts.length || houseNotes.length || corrections.length;
+    if (forWatcher) props[CFG.checkField] = 'Fixes approved';
+    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '') + (corrections.length ? ', ' + corrections.length + ' correction' + (corrections.length === 1 ? '' : 's') + ' to the AI reader' : '');
+    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : (forWatcher ? ' Nothing to apply: the notes and corrections are written into this section\'s knowledge in the background, within a minute.' : ' Nothing to apply, so the AI check field is unchanged.')), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
   }
   // After Send: watch the layout's AI check field until the background pass has applied the fixes, then show what became of each.
   function waitForFixes(id, what) {
