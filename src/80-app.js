@@ -65,7 +65,10 @@
   function showLastPass(o) {
     var box = $('aicheck-lastpass'); if (!box) return; box.hidden = true; var al0 = $('aicheck-addinfo-alert'); if (al0) al0.textContent = ''; var pj = null; try { pj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e) {}
     // Fixes held up by an article someone else has checked out (2026-09-22): said at once, whatever came before.
-    if (pj && pj.waiting && extraOf(o, CFG.checkField) === 'Fixes approved') say(waitingWords(pj.waiting), 'warn');
+    // kept in S.waitMsg as well: the page is drawn after this and its "Loaded…" line used to overwrite it (Benn, 2026-09-22:
+    // "I don't see the wait message")
+    S.waitMsg = (pj && pj.waiting && extraOf(o, CFG.checkField) === 'Fixes approved') ? waitingWords(pj.waiting) : null;
+    if (S.waitMsg) say(S.waitMsg, 'warn');
     if (!pj || !pj.results || !pj.results.length) return;
     // A fix sent twice is not a failure. The tools' guards refuse the second attempt because the page is already the way
     // the fix wanted it — the frame has moved since the report, the colour is already the style's — and that came out in
@@ -168,7 +171,7 @@
     fitPage(); if (window.ResizeObserver && !S.ro) { S.ro = new ResizeObserver(function () { fitPage(); }); S.ro.observe(document.querySelector('.aicheck-app .viewer')); }
     renderWorkedTo(report.workedTo);
     $('aicheck-send').disabled = false;
-    say('Loaded. Choose an action on each finding, decide the labels, then Send.', 'ok');
+    if (S.waitMsg) say(S.waitMsg, 'warn'); else say('Loaded. Choose an action on each finding, decide the labels, then Send.', 'ok');
   }
 
   // who is deciding: the SDK's info block — field names untested on this server, so every shape is tried and '' is the fallback
