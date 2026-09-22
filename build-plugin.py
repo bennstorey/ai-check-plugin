@@ -44,8 +44,10 @@ def studio_markup(m):
         '<div class="out decide">'
         '  <div class="decide-row"><span class="sum" id="actSum"></span><span class="sum" id="todoSum"></span><span class="sum" id="ignSum"></span></div>'
         '  <div class="decide-row"><button class="btn primary" id="aicheck-send" disabled>Send</button><span id="aicheck-msg" class="appmsg"></span></div>'
-        '  <div class="decide-row hint">Send is all you do. The fixes are then applied in the background, usually within a minute, and the result of each one appears at the top of this page. You do not need to open InDesign. (If the layout is open in InDesign, close it first: the fixes wait until it is free.)</div>'
-        '  <details class="jobdetails"><summary>Job details</summary>'
+        # the explanation and the run's own footnote live in the fold, not on the screen (Benn, 2026-09-22: less noise)
+        '  <details class="jobdetails"><summary>Job details and Send info</summary>'
+        '    <p class="jobhint">Send is all you do. The fixes are then applied in the background, usually within a minute, and the result of each one appears at the top of this page. You do not need to open InDesign. (If the layout is open in InDesign, close it first: the fixes wait until it is free.)</p>'
+        '    <div class="jobfoot" id="aicheck-jobfoot"></div>'
         '    <label>Fixes (Actions)<textarea id="actions" readonly spellcheck="false"></textarea></label><button class="btn" id="copyActions">Copy</button>'
         '    <label>Brand rules (Always fix / Always ignore)<textarea id="rules" readonly spellcheck="false"></textarea></label>'
         '    <label>Template to-dos<textarea id="todos" readonly spellcheck="false"></textarea></label><button class="btn" id="copyTodos">Copy</button>'
@@ -73,7 +75,12 @@ STUDIO_CSS = """
 .aicheck-app .aicheck-bar .btn{white-space:nowrap}
 /* one fold for the extras */
 .aicheck-app #aicheck-addinfo .addinfo-part{margin:6px 0 10px}
-.aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}   /* panels are display:flex, which otherwise beats the hidden attribute */
+.aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.aicheck-app #aicheck-addinfo .readersum{margin:6px 0 10px;padding:0;border:0;background:transparent}
+.aicheck-app #aicheck-addinfo .addinfo-part:has(> .readersum[hidden]){display:none}   /* a report with no reader's account (rule checks only): no empty heading */
+.aicheck-app .jobdetails .jobhint{margin:8px 0;color:var(--ink-2);font-size:12.5px;line-height:1.5}
+.aicheck-app .jobdetails .jobfoot .foot{padding:0;margin:0 0 10px;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;font-size:11.5px;color:var(--ink-3)}
+.aicheck-app .es-build{margin-top:18px;font-size:11px;color:var(--ink-3)}   /* panels are display:flex, which otherwise beats the hidden attribute */
 /* nothing loaded: the whole width, whatever column split the person dragged last time — that is kept on the element
    itself and would otherwise win, leaving the empty card centred in the old left column (Benn, 2026-09-22) */
 .aicheck-app main.wrap.nowork{grid-template-columns:1fr!important}

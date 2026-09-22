@@ -199,6 +199,11 @@
       var side = document.querySelector('.aicheck-app main.wrap > section.panel[aria-label="Findings"]');
       var sidehead = $('aicheck-sidehead'), topc = document.querySelector('.aicheck-app .top.compact');
       if (side && sidehead) { side.insertBefore(sidehead, side.firstChild); if (topc) side.insertBefore(topc, sidehead.nextSibling); }
+      // Less on the screen (Benn, 2026-09-22): the reader's own account of the page goes into Additional info, and the
+      // run's footnote into "Job details and Send info". The page script still writes both by id, wherever they sit.
+      var addinfo = $('aicheck-addinfo'), rsum = $('readerSummary');
+      if (addinfo && rsum) { var part = document.createElement('div'); part.className = 'addinfo-part'; part.innerHTML = '<h4>How the reader read this page</h4>'; part.appendChild(rsum); addinfo.insertBefore(part, addinfo.children[2] || null); }
+      var jobfoot = $('aicheck-jobfoot'), footEl = $('foot'); if (jobfoot && footEl) jobfoot.appendChild(footEl);
       // Nothing loaded yet: the design's card, so the app says what it is and what happens next (Figma 2015:4)
       var empty = document.createElement('div'); empty.className = 'emptystate'; empty.id = 'aicheck-empty';
       empty.innerHTML = '<div class="es-card">' +
@@ -207,7 +212,8 @@
         '<p>Type a layout or template ID and press Load, or pick one from “in progress” above.</p>' +
         '<ol class="es-steps"><li><span>1</span>Load the layout you are working on</li>' +
         '<li><span>2</span>Read what the check found, and decide each one</li>' +
-        '<li><span>3</span>Press Send — the fixes are applied in the background, without opening InDesign</li></ol></div>';
+        '<li><span>3</span>Press Send — the fixes are applied in the background, without opening InDesign</li></ol>' +
+        '<div class="es-build">AI Check plug-in ' + VERSION + '</div></div>';
       if (side) side.appendChild(empty);
       // main.wrap now holds the picker, so it can never be hidden: the viewer and the list hide instead until a layout loads
       var viewer = document.querySelector('.aicheck-app main.wrap > section.viewer');
