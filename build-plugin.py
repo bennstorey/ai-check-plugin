@@ -74,7 +74,9 @@ STUDIO_CSS = """
 /* one fold for the extras */
 .aicheck-app #aicheck-addinfo .addinfo-part{margin:6px 0 10px}
 .aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}   /* panels are display:flex, which otherwise beats the hidden attribute */
-.aicheck-app main.wrap.nowork{grid-template-columns:1fr}
+/* nothing loaded: the whole width, whatever column split the person dragged last time — that is kept on the element
+   itself and would otherwise win, leaving the empty card centred in the old left column (Benn, 2026-09-22) */
+.aicheck-app main.wrap.nowork{grid-template-columns:1fr!important}
 /* the empty state, from the design (Figma 2015:4): the picker on its band, one card centred in the room below */
 .aicheck-app .apppanel{background:var(--ground)}
 .aicheck-app .emptystate{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:32px 16px}
