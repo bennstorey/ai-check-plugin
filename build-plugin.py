@@ -77,6 +77,13 @@ STUDIO_CSS = """
 .aicheck-app #aicheck-addinfo .addinfo-part{margin:6px 0 10px}
 .aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}
 .aicheck-app #aicheck-addinfo .readersum{margin:6px 0 10px;padding:0;border:0;background:transparent}
+.aicheck-app #aicheck-addinfo .addinfo-alert{color:#991B1B;font-weight:600}
+.aicheck-app #aicheck-addinfo .toolbar{padding:8px 0 4px;border:0;background:transparent}
+.aicheck-app #aicheck-addinfo .addinfo-top .lastpass{margin-top:4px}
+/* the list of changes on #EEEEEE (Benn, 2026-09-22), filling the column */
+.aicheck-app #groups{background:#EEEEEE;padding:4px 0 14px;flex:1 1 auto}
+.aicheck-app main.wrap>section.panel[aria-label="Findings"]{background:#EEEEEE}
+.aicheck-app #aicheck-sidehead,.aicheck-app .top.compact{background:var(--paper)}
 .aicheck-app #aicheck-addinfo .addinfo-part:has(> .readersum[hidden]){display:none}   /* a report with no reader's account (rule checks only): no empty heading */
 .aicheck-app .jobdetails .jobhint{margin:8px 0;color:var(--ink-2);font-size:12.5px;line-height:1.5}
 .aicheck-app .jobdetails .jobfoot .foot{padding:0;margin:0 0 10px;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;font-size:11.5px;color:var(--ink-3)}

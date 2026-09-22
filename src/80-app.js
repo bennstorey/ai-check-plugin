@@ -19,10 +19,14 @@
     '  <span id="aicheck-msg0" class="appmsg"></span>' +
     '</div></div>';
   // the head of the right-hand column: what became of the last fixes, and ONE fold for everything else
+  // ONE fold for everything that is not the list (Benn, 2026-09-22): the last fixes and the list's controls at its top,
+  // then what the check worked to, the reader's account and the layout details.
   var SIDEHEAD = '' +
     '<section class="apppanel" id="aicheck-sidehead">' +
-    '  <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
-    '  <details class="appdetails" id="aicheck-addinfo"><summary>Additional info</summary>' +
+    '  <details class="appdetails" id="aicheck-addinfo"><summary>Additional info<span class="addinfo-alert" id="aicheck-addinfo-alert"></span></summary>' +
+    '    <div class="addinfo-part addinfo-top" id="aicheck-addinfo-top">' +
+    '      <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
+    '    </div>' +
     '    <div class="addinfo-part" id="aicheck-workedto"><h4>What this check worked to</h4><div id="aicheck-workedto-body"></div></div>' +
     '    <div class="addinfo-part"><h4>Layout details</h4><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline" class="line"></span></div></div>' +
     '  </details>' +
@@ -59,7 +63,7 @@
 
   // What became of the fixes that were last sent: the check-in scripts write a result per fix back beside the decisions.
   function showLastPass(o) {
-    var box = $('aicheck-lastpass'); if (!box) return; box.hidden = true; var pj = null; try { pj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e) {}
+    var box = $('aicheck-lastpass'); if (!box) return; box.hidden = true; var al0 = $('aicheck-addinfo-alert'); if (al0) al0.textContent = ''; var pj = null; try { pj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e) {}
     if (!pj || !pj.results || !pj.results.length) return;
     // A fix sent twice is not a failure. The tools' guards refuse the second attempt because the page is already the way
     // the fix wanted it — the frame has moved since the report, the colour is already the style's — and that came out in
@@ -82,6 +86,10 @@
     $('aicheck-lastpass-sum').textContent = 'Last fixes sent' + (when && !isNaN(when) ? ' (applied ' + when.toLocaleString() + ')' : '') + ': ' + okN + ' applied'
       + (againN ? ', ' + againN + ' already done' : '') + (badN ? ', ' + badN + ' refused' : (againN ? '' : ', none refused'));
     box.className = 'lastpass' + (badN ? ' bad' : ''); box.open = badN > 0;
+    // the banner now lives inside "Additional info": a genuine refusal must still be seen without opening anything
+    var alertEl = $('aicheck-addinfo-alert'), addinfo = $('aicheck-addinfo');
+    if (alertEl) alertEl.textContent = badN ? ' · ' + badN + ' fix' + (badN === 1 ? '' : 'es') + ' refused' : '';
+    if (addinfo && badN) addinfo.open = true;
     var ul = $('aicheck-lastpass-list'); ul.innerHTML = '';
     pj.results.forEach(function (r) { var st = standing(r), li = document.createElement('li'); li.className = r.ok ? 'ok' : (st === 'done' ? 'again' : 'bad');
       var what = (r.why || r.op || 'fix') + ' (item ' + (r.frameId || '?') + (r.page ? ', page ' + r.page : '') + ')';
@@ -202,8 +210,9 @@
       // Less on the screen (Benn, 2026-09-22): the reader's own account of the page goes into Additional info, and the
       // run's footnote into "Job details and Send info". The page script still writes both by id, wherever they sit.
       var addinfo = $('aicheck-addinfo'), rsum = $('readerSummary');
-      if (addinfo && rsum) { var part = document.createElement('div'); part.className = 'addinfo-part'; part.innerHTML = '<h4>How the reader read this page</h4>'; part.appendChild(rsum); addinfo.insertBefore(part, addinfo.children[2] || null); }
+      if (addinfo && rsum) { var part = document.createElement('div'); part.className = 'addinfo-part'; part.innerHTML = '<h4>How the reader read this page</h4>'; part.appendChild(rsum); addinfo.insertBefore(part, addinfo.lastElementChild); }   // between what the check worked to and the layout details
       var jobfoot = $('aicheck-jobfoot'), footEl = $('foot'); if (jobfoot && footEl) jobfoot.appendChild(footEl);
+      var topPart = $('aicheck-addinfo-top'), toolbar = document.querySelector('.aicheck-app .toolbar'); if (topPart && toolbar) topPart.appendChild(toolbar);
       // Nothing loaded yet: the design's card, so the app says what it is and what happens next (Figma 2015:4)
       var empty = document.createElement('div'); empty.className = 'emptystate'; empty.id = 'aicheck-empty';
       empty.innerHTML = '<div class="es-card">' +
