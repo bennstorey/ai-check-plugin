@@ -45,7 +45,9 @@
     '.ba-side h3{margin:0;padding:12px 14px;font-size:13px;font-weight:500;border-bottom:1px solid #000}',
     '.ba-side .ba-list{overflow:auto;flex:1}',
     '.ba-item{padding:10px 14px;border-bottom:1px solid #222933;cursor:pointer}',
-    '.ba-item:hover{background:#1c222a}.ba-item.ba-sel{background:#222b35;border-left:3px solid #f0a000;padding-left:11px}',
+    '.ba-item:hover{background:#1c222a}.ba-item.ba-sel{background:#1b3334;border-left:3px solid #2fa0a4;padding-left:11px}',
+    // the SELECTED change in WoodWing green (Benn, 2026-09-22: a white box disappears on a white page)
+    '.ba-box.ba-on{border:3px solid #2fa0a4;background:rgba(47,160,164,.28);box-shadow:0 0 0 2px rgba(255,255,255,.9)}',
     '.ba-item b{font-weight:500}.ba-item .ba-dim{color:#98a2ae;display:block;margin-top:2px}',
     '.ba-foot{padding:10px 14px;border-top:1px solid #000;color:#98a2ae}',
     '.ba-msg{padding:14px;color:#cfd6de}',
@@ -127,10 +129,9 @@
     BA.changes.forEach(function (c, i) {
       var b = (BA.showing === 'before' ? (c.boundsBefore || c.bounds) : (c.boundsAfter || c.bounds));
       if (!b) return;
-      var d = document.createElement('div'); d.className = 'ba-box' + (BA.selected === i ? '' : '');
+      var d = document.createElement('div'); d.className = 'ba-box' + (BA.selected === i ? ' ba-on' : '');
       d.style.top = ((b[0] - o[0]) * scale) + 'px'; d.style.left = ((b[1] - o[1]) * scale) + 'px';
       d.style.height = ((b[2] - b[0]) * scale) + 'px'; d.style.width = ((b[3] - b[1]) * scale) + 'px';
-      if (BA.selected === i) { d.style.borderColor = '#fff'; d.style.background = 'rgba(255,255,255,.25)'; }
       box.appendChild(d);
     });
   }
@@ -177,14 +178,34 @@
 
   // what a fix did, in the words a person on the desk would use
   function inWords(r, fr) {
-    var b = r.before || {}, a = r.after || {}, where = fr.label ? (fr.label + (fr.page ? ' on page ' + fr.page : '')) : ('frame ' + (r.frameId || (r.target && r.target.frameId) || ''));
+    // name the ITEM, not its element label (Benn, 2026-09-22: the label is a background cross-check, never shown)
+    var KIND = { title: 'Headline', subtitle: 'Standfirst', crosshead: 'Crosshead', byline: 'Byline', body: 'Body text', caption: 'Caption', credit: 'Picture credit', quote: 'Pull quote', image: 'Picture', graphic: 'Graphic', rule: 'Rule', furniture: 'Page furniture' };
+    var own = (fr.picture && fr.picture.link) ? ' (' + fr.picture.link + ')' : (fr.snippet ? ' “' + String(fr.snippet).slice(0, 34) + (String(fr.snippet).length > 34 ? '…' : '') + '”' : '');
+    var b = r.before || {}, a = r.after || {}, where = (KIND[fr.role] || (r.op === 'MoveGraphicInFrame' || r.op === 'FillFrameProportionally' ? 'Picture' : 'Item')) + own + ((fr.page || r.page) ? ' on page ' + (fr.page || r.page) : '');
     function num(x) { return (Math.round(x * 100) / 100); }
     if (b.fillColor !== undefined || a.fillColor !== undefined || b.fillTint !== undefined || a.fillTint !== undefined) {
       if (b.fillColor !== a.fillColor) return { title: 'Colour put back', detail: where + ': ' + b.fillColor + ' → ' + a.fillColor };
       if (b.fillTint !== a.fillTint) return { title: 'Tint put back', detail: where + ': ' + num(b.fillTint) + '% → ' + num(a.fillTint) + '% of the same colour' };
       return null;
     }
-    if (b.tracking !== undefined && b.tracking !== a.tracking) return { title: 'Tracking reset', detail: where + ': ' + num(b.tracking) + ' → ' + num(a.tracking) };
+    // A PICTURE moved or refitted inside its frame: the frame stays where it is, so its bounds say nothing changed — the
+    // picture's own bounds say what did (Benn, 2026-09-22: "Nothing changed" on picture moves that plainly changed).
+    if (b.graphic && a.graphic) {
+      var gb = b.graphic, ga = a.graphic, gd = [ga[0] - gb[0], ga[1] - gb[1], ga[2] - gb[2], ga[3] - gb[3]];
+      var gOff = function (x) { return Math.abs(x) > 0.01; };
+      if (gOff(gd[0]) || gOff(gd[1]) || gOff(gd[2]) || gOff(gd[3])) {
+        var resized = gOff((ga[2] - ga[0]) - (gb[2] - gb[0])) || gOff((ga[3] - ga[1]) - (gb[3] - gb[1]));
+        if (resized) return { title: 'Picture refitted to its frame', detail: where + ': ' + num(gb[3] - gb[1]) + ' × ' + num(gb[2] - gb[0]) + ' pt → ' + num(ga[3] - ga[1]) + ' × ' + num(ga[2] - ga[0]) + ' pt' };
+        var gbits = []; if (gOff(gd[1])) gbits.push((gd[1] > 0 ? 'right ' : 'left ') + num(Math.abs(gd[1])) + ' pt'); if (gOff(gd[0])) gbits.push((gd[0] > 0 ? 'down ' : 'up ') + num(Math.abs(gd[0])) + ' pt');
+        return { title: 'Picture moved inside its frame', detail: where + ': ' + gbits.join(' and ') };
+      }
+    }
+    // Text put back: say EVERY attribute that changed, not just the first one found (2026-09-22: a headline reset from 54 pt
+    // tracked -60 to 46 pt tracked 0 was listed as "Tracking reset -60 → 0").
+    var TEXT_ATTRS = [['pointSize', 'size', ' pt'], ['leading', 'leading', ' pt'], ['tracking', 'tracking', ''], ['horizontalScale', 'width', '%'], ['baselineShift', 'baseline shift', ' pt']];
+    var tbits = [];
+    TEXT_ATTRS.forEach(function (t) { var k = t[0]; if (b[k] !== undefined && a[k] !== undefined && String(b[k]) !== String(a[k])) tbits.push(t[1] + ' ' + (typeof b[k] === 'number' ? num(b[k]) : b[k]) + t[2] + ' → ' + (typeof a[k] === 'number' ? num(a[k]) : a[k]) + t[2]); });
+    if (tbits.length) return { title: tbits.length === 1 && b.tracking !== undefined && b.tracking !== a.tracking ? 'Tracking reset' : 'Type put back to its style', detail: where + ': ' + tbits.join(', ') };
     if (b.font !== undefined && b.font !== a.font) return { title: 'Font put back', detail: where + ': ' + b.font + ' → ' + a.font };
     if (b.bounds && a.bounds) {
       // Edge by edge: a frame whose left edge alone moved was NOT "moved 2 pt, resized" — it was pulled in on one side,
@@ -242,7 +263,7 @@
       var fr = frames[String(r.frameId || (r.target && r.target.frameId))] || {};
       // A fix that reported success and changed nothing is worth seeing, not hiding: that is exactly how the tint bug
       // of 2026-09-20 hid — ResetTextRange said it had put the colour back and the type stayed at 94%.
-      var w = inWords(r, fr) || { title: 'Nothing changed', detail: (fr.label || ('frame ' + (r.frameId || ''))) + ': the ' + (r.op || r.requested) + ' tool reported success but the page is the same' };
+      var w = inWords(r, fr) || { title: 'Nothing changed', detail: 'The ' + friendly(r.op || r.requested).toLowerCase() + ' fix reported success, but nothing it records moved' + ((fr.page || r.page) ? ' (page ' + (fr.page || r.page) + ')' : '') };
       if (r.article) w.detail = (window.__aiCheckArticleWords ? window.__aiCheckArticleWords(r).replace(/^ — i/, 'I') + ': ' : '') + w.detail;
       out.push({ op: r.op || r.requested, title: w.title, detail: w.detail,
                  round: many ? ('round ' + (ri + 1) + ' of ' + rounds.length + (round.afterVersion ? ', v' + round.afterVersion : '')) : null,
