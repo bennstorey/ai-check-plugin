@@ -62,8 +62,7 @@
     '      <span class="ba-dim">→</span>' +
     '      <select id="ba-version-after" title="the version the fixes landed in"></select>' +
     '      <label><input type="checkbox" id="ba-changes" checked> show what changed</label>' +
-    '      <span class="ba-spacer"></span>' +
-    '      <input id="ba-id" placeholder="layout id"><button class="ba-btn" id="ba-load">Load</button>' +
+
     '    </div>' +
     '    <div class="ba-stage" id="ba-stage">' +
     '      <div class="ba-scroll" id="ba-scroll">' +
@@ -360,7 +359,7 @@
 
   function initBeforeAfter() {
     if (!document.getElementById('ba-style')) { var st = document.createElement('style'); st.id = 'ba-style'; st.textContent = BA_CSS; document.head.appendChild(st); }
-    $ba('ba-load').onclick = function () { var v = $ba('ba-id').value.trim(); if (!v) return; if (window.__aiCheckSetCurrent) window.__aiCheckSetCurrent(v); load(v); };
+    // no Load of its own: the bar above both tabs chooses the layout, and this view follows it
     $ba('ba-before').onclick = function () { show('before'); };
     $ba('ba-after').onclick = function () { show('after'); };
     $ba('ba-changes').onchange = function () { BA.showChanges = this.checked; drawBoxes(); };

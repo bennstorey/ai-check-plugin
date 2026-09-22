@@ -2,25 +2,36 @@
   var CFG = { checkField: 'C_AI_CHECK', actionsField: 'C_AI_ACTIONS', reportField: 'C_AI_REPORT', localReports: 'http://localhost:8765' };
   var S = { obj: null, report: null, pointer: null, review: null };
   var $ = function (id) { return document.getElementById(id); };
-  function say(msg, kind) { var e = $('aicheck-msg0'); if (!e) e = $('aicheck-msg0') || $('aicheck-msg'); if (e) { e.textContent = msg; e.className = 'appmsg ' + (kind || ''); } var other = (e && e.id === 'aicheck-msg') ? $('aicheck-msg0') : $('aicheck-msg'); if (other) { other.textContent = ''; other.className = 'appmsg'; } }
+  // With a layout on screen, messages go beside Send (as in the design) so the bar stays one row; before that, in the bar.
+  function say(msg, kind) { var work = document.querySelector('.aicheck-app main.wrap:not(.nowork)'); var e = (work && $('aicheck-msg')) ? $('aicheck-msg') : $('aicheck-msg0'); if (!e) e = $('aicheck-msg0') || $('aicheck-msg'); if (e) { e.textContent = msg; e.className = 'appmsg ' + (kind || ''); } var other = (e && e.id === 'aicheck-msg') ? $('aicheck-msg0') : $('aicheck-msg'); if (other) { other.textContent = ''; other.className = 'appmsg'; } }
 
-  var PICKER = '' +
-    '<section class="panel apppanel" id="aicheck-picker">' +
-    '  <div class="approw"><label>Layout or template <input id="aicheck-id" size="7" placeholder="ID"></label>' +
-    '    <button class="btn primary" id="aicheck-load">Load</button>' +
-    '    <label>in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
-    '    <button class="btn" id="aicheck-request" disabled>Request a check</button>' +
-    '    <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
-    '    <span id="aicheck-msg0" class="appmsg"></span></div>' +
+  // THE BAR (Benn, 2026-09-22, Figma 2004:338): one row across the full width under the tabs, there whether or not a
+  // layout is loaded — the ID, Load, the in-progress list and the three actions. It is shared by both tabs, so there is
+  // one place to choose a layout (and Before & after no longer needs controls of its own).
+  var BAR = '' +
+    '<div class="aicheck-app aicheck-barwrap" data-theme="light"><div class="aicheck-bar" id="aicheck-picker">' +
+    '  <label>Layout or template <input id="aicheck-id" size="7" placeholder="ID"></label>' +
+    '  <button class="btn primary" id="aicheck-load">Load</button>' +
+    '  <label class="dim">in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
+    '  <button class="btn" id="aicheck-request" disabled>Request a check</button>' +
+    '  <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
+    '  <label class="btn" title="For development: show a report from a file on this Mac, without Studio">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
+    '  <span id="aicheck-msg0" class="appmsg"></span>' +
+    '</div></div>';
+  // the head of the right-hand column: what became of the last fixes, and ONE fold for everything else
+  var SIDEHEAD = '' +
+    '<section class="apppanel" id="aicheck-sidehead">' +
     '  <details class="lastpass" id="aicheck-lastpass" hidden><summary id="aicheck-lastpass-sum"></summary><ul id="aicheck-lastpass-list"></ul></details>' +
-    '  <details class="appdetails" id="aicheck-workedto"><summary>What this check worked to</summary><div id="aicheck-workedto-body"></div></details>' +
-    '  <details class="appdetails"><summary>Layout details</summary><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline"></span></div>' +
-    '    <div class="approw"><label class="btn">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label> <span class="line">for development: show a report from a file on this Mac, without Studio</span></div></details>' +
+    '  <details class="appdetails" id="aicheck-addinfo"><summary>Additional info</summary>' +
+    '    <div class="addinfo-part" id="aicheck-workedto"><h4>What this check worked to</h4><div id="aicheck-workedto-body"></div></div>' +
+    '    <div class="addinfo-part"><h4>Layout details</h4><div class="approw"><span id="aicheck-layoutline" class="line"></span></div><div class="approw"><span id="aicheck-reportline" class="line"></span></div><div class="approw"><span id="aicheck-buildline" class="line"></span></div></div>' +
+    '  </details>' +
     '</section>';
+  var PICKER = SIDEHEAD;   // kept by name: the page assembly below puts it in the app, and onInit moves it to the right column
 
   // Studio does not tell the page how tall its container is: measure the room below the app's top edge, so the
   // two columns scroll inside the panel and the Send bar sits at the bottom (C31 — the page was clipped, not scrolled)
-  function fitHeight() { var app = document.querySelector('.aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; fitPage(); }
+  function fitHeight() { var app = document.querySelector('#aicheck-view-check > .aicheck-app'); if (!app) return; var top = app.getBoundingClientRect().top; var h = window.innerHeight - top - 4; if (h > 240) app.style.height = h + 'px'; fitPage(); }
   // the page box is as wide as its column by default; cap it so the whole page fits the room the preview column has
   // (tabs, zoom bar and legend subtracted), otherwise the bottom of the page is out of view and the zoom centres there
   function fitPage() { var page = document.getElementById('page'), st = document.querySelector('.aicheck-app .stage'); if (!page || !st || !S.pageSize) return; var room = st.clientHeight - 28; if (room < 120) { page.style.maxWidth = ''; return; } var ar = String(page.style.aspectRatio || '').split('/'), w = parseFloat(ar[0]) || S.pageSize[0], h = parseFloat(ar[1]) || S.pageSize[1]; page.style.maxWidth = 'min(100%, ' + Math.floor(room * w / h) + 'px)'; }   // the stage fills the column (flex); the page box fits inside it, and the zoom uses the stage as its window
@@ -181,13 +192,13 @@
 
   ContentStationSdk.registerCustomApp({
     name: 'ai-check', title: 'AI Check',
-    content: '<div class="aicheck-tabs"><button class="aicheck-tab" id="aicheck-tab-check" aria-pressed="true">Check</button><button class="aicheck-tab" id="aicheck-tab-ba" aria-pressed="false">Before &amp; after</button></div>' + '<div id="aicheck-view-check"><div class="aicheck-app" data-theme="light">' + PICKER + PAGE_HTML + '</div></div>' + '<div id="aicheck-view-ba" hidden></div>',
+    content: '<div class="aicheck-tabs"><button class="aicheck-tab" id="aicheck-tab-check" aria-pressed="true">Check</button><button class="aicheck-tab" id="aicheck-tab-ba" aria-pressed="false">Before &amp; after</button></div>' + BAR + '<div id="aicheck-view-check"><div class="aicheck-app" data-theme="light">' + PICKER + PAGE_HTML + '</div></div>' + '<div id="aicheck-view-ba" hidden></div>',
     onInit: function () {
       if (!document.getElementById('aicheck-style')) { var st = document.createElement('style'); st.id = 'aicheck-style'; st.textContent = PAGE_CSS; document.head.appendChild(st); }
       var main = document.querySelector('.aicheck-app main.wrap');
       var side = document.querySelector('.aicheck-app main.wrap > section.panel[aria-label="Findings"]');
-      var picker = $('aicheck-picker'), topc = document.querySelector('.aicheck-app .top.compact');
-      if (side && picker) { side.insertBefore(picker, side.firstChild); if (topc) side.insertBefore(topc, picker.nextSibling); }
+      var sidehead = $('aicheck-sidehead'), topc = document.querySelector('.aicheck-app .top.compact');
+      if (side && sidehead) { side.insertBefore(sidehead, side.firstChild); if (topc) side.insertBefore(topc, sidehead.nextSibling); }
       // Nothing loaded yet: the design's card, so the app says what it is and what happens next (Figma 2015:4)
       var empty = document.createElement('div'); empty.className = 'emptystate'; empty.id = 'aicheck-empty';
       empty.innerHTML = '<div class="es-card">' +
@@ -203,7 +214,7 @@
       function showWork(on) { if (viewer) viewer.hidden = !on; var es = $('aicheck-empty'); if (es) es.hidden = on; var sp = $('aicheck-split'); if (sp) sp.hidden = !on;
         ['aicheck-groups-host', 'toolbar', 'groups'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = !on; });
         var tb = document.querySelector('.aicheck-app .toolbar'), out = document.querySelector('.aicheck-app .out'); if (tb) tb.hidden = !on; if (out) out.hidden = !on;
-        if (topc) topc.hidden = !on;
+        if (topc) topc.hidden = !on; if (sidehead) sidehead.hidden = !on;
         if (main) main.classList.toggle('nowork', !on); }
       window.__aiCheckShowWork = showWork; showWork(false);
       fitHeight(); window.addEventListener('resize', fitHeight); setTimeout(fitHeight, 300);

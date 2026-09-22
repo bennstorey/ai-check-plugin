@@ -62,7 +62,18 @@ STUDIO_CSS = """
 .aicheck-app .wrap[hidden]{display:none}
 .aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden}
 .aicheck-app .apppanel{margin:0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex:0 0 auto;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}
-.aicheck-app [hidden]{display:none!important}   /* panels are display:flex, which otherwise beats the hidden attribute */
+.aicheck-app [hidden]{display:none!important}
+/* the bar (Figma 2004:338): one row under the tabs, full width, always there */
+.aicheck-app.aicheck-barwrap{height:auto;overflow:visible;display:block;flex:0 0 auto}
+.aicheck-app .aicheck-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 24px;background:var(--ground);border-bottom:1px solid var(--line);font-size:13px;color:var(--ink)}
+.aicheck-app .aicheck-bar label{display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
+.aicheck-app .aicheck-bar label.dim{color:var(--ink-3)}
+.aicheck-app .aicheck-bar input,.aicheck-app .aicheck-bar select{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:5px 9px;font-size:13px}
+.aicheck-app .aicheck-bar input{width:96px}.aicheck-app .aicheck-bar select{min-width:260px;max-width:340px}
+.aicheck-app .aicheck-bar .btn{white-space:nowrap}
+/* one fold for the extras */
+.aicheck-app #aicheck-addinfo .addinfo-part{margin:6px 0 10px}
+.aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}   /* panels are display:flex, which otherwise beats the hidden attribute */
 .aicheck-app main.wrap.nowork{grid-template-columns:1fr}
 /* the empty state, from the design (Figma 2015:4): the picker on its band, one card centred in the room below */
 .aicheck-app .apppanel{background:var(--ground)}
