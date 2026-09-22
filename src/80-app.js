@@ -64,6 +64,8 @@
   // What became of the fixes that were last sent: the check-in scripts write a result per fix back beside the decisions.
   function showLastPass(o) {
     var box = $('aicheck-lastpass'); if (!box) return; box.hidden = true; var al0 = $('aicheck-addinfo-alert'); if (al0) al0.textContent = ''; var pj = null; try { pj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e) {}
+    // Fixes held up by an article someone else has checked out (2026-09-22): said at once, whatever came before.
+    if (pj && pj.waiting && extraOf(o, CFG.checkField) === 'Fixes approved') say(waitingWords(pj.waiting), 'warn');
     if (!pj || !pj.results || !pj.results.length) return;
     // A fix sent twice is not a failure. The tools' guards refuse the second attempt because the page is already the way
     // the fix wanted it — the frame has moved since the report, the colour is already the style's — and that came out in
@@ -92,7 +94,7 @@
     if (addinfo && badN) addinfo.open = true;
     var ul = $('aicheck-lastpass-list'); ul.innerHTML = '';
     pj.results.forEach(function (r) { var st = standing(r), li = document.createElement('li'); li.className = r.ok ? 'ok' : (st === 'done' ? 'again' : 'bad');
-      var what = (r.why || r.op || 'fix') + ' (item ' + (r.frameId || '?') + (r.page ? ', page ' + r.page : '') + ')';
+      var what = (r.why || r.op || 'fix') + ' (item ' + (r.frameId || '?') + (r.page ? ', page ' + r.page : '') + ')' + articleWords(r);
       var had = earlier[(r.op || '') + '|' + (r.frameId || '')];
       var how = r.ok ? ('applied' + (r.now !== undefined && r.now !== null ? ': “' + (r.was || 'no label') + '” → “' + r.now + '”' : '') + (r.note ? '. ' + r.note : ''))
               : (st === 'done' ? ('already done' + (had ? ' — applied in an earlier round' + (had.at ? ' (' + new Date(had.at).toLocaleString() + ')' : '') : ' — the page is already the way this fix wanted it') + '. Nothing to do.')
@@ -102,6 +104,12 @@
       ul.appendChild(li); });
     box.hidden = false;
   }
+
+  // a fix on placed-article text went through the ARTICLE: its own check-out, check-in and version (2026-09-22)
+  function articleWords(r) { var a = r && r.article; if (!a) return ''; return ' — in the article “' + (a.name || a.articleId) + '”' + (a.versionBefore && a.versionAfter && a.versionBefore !== a.versionAfter ? ', v' + a.versionBefore + ' → v' + a.versionAfter : ''); }
+  function waitingWords(w) { var who = (w.articles || []).map(function (x) { return '“' + (x.name || x.articleId) + '” is checked out by ' + (x.lockedBy || 'someone else'); }).join('; ');
+    return 'Waiting: ' + who + '. The fixes are applied as soon as it is checked in; after ' + (w.minutes || 30) + ' minutes the fixes on that article are reported as not applied and the rest go ahead.'; }
+  window.__aiCheckArticleWords = articleWords;
 
   // ONE current layout for the whole plug-in (Benn, 2026-09-21: switching in one tab left the other on the old layout).
   // Whichever tab loads it, it becomes current; the other tab catches up when it is next shown.
@@ -198,6 +206,8 @@
           var o = res.Objects[0], field = extraOf(o, CFG.checkField), secs = Math.round((Date.now() - started) / 1000), wm = o.MetaData.WorkflowMetaData;
           if (String(S.obj.MetaData.BasicMetaData.ID) !== String(id)) return;                       // another layout was loaded meanwhile
           if (field === 'Fixes applied') { S.obj.MetaData = o.MetaData; showLastPass(o); say('Done: the fixes were applied in the background (now v' + wm.Version + ', ' + secs + ' s). Each result is listed at the top.', 'ok'); listInProgress(); return; }
+          var wpj = null; try { wpj = JSON.parse(extraOf(o, CFG.actionsField) || 'null'); } catch (e1) {}
+          if (field === 'Fixes approved' && wpj && wpj.waiting) { if (secs < ((wpj.waiting.minutes || 30) * 60 + 300)) { say(waitingWords(wpj.waiting), 'warn'); again(); return; } }
           if (secs > 300) { say('Sent ' + what + ', but nothing has applied them after five minutes. Either the background watcher is not running, or the layout is open in InDesign' + (wm.LockedBy ? ' (in use by ' + wm.LockedBy + ')' : '') + '. Closing it, or checking it in from InDesign, applies them.', 'warn'); return; }
           say('Sent ' + what + '. Applying in the background… ' + secs + ' s' + (wm.LockedBy ? ' (the layout is in use by ' + wm.LockedBy + ': that is normal while the fixes are applied; if it is you in InDesign, close it)' : ''), 'info'); again();
         }).catch(function () { again(); });

@@ -240,6 +240,7 @@
       // A fix that reported success and changed nothing is worth seeing, not hiding: that is exactly how the tint bug
       // of 2026-09-20 hid — ResetTextRange said it had put the colour back and the type stayed at 94%.
       var w = inWords(r, fr) || { title: 'Nothing changed', detail: (fr.label || ('frame ' + (r.frameId || ''))) + ': the ' + (r.op || r.requested) + ' tool reported success but the page is the same' };
+      if (r.article) w.detail = (window.__aiCheckArticleWords ? window.__aiCheckArticleWords(r).replace(/^ — i/, 'I') + ': ' : '') + w.detail;
       out.push({ op: r.op || r.requested, title: w.title, detail: w.detail,
                  round: many ? ('round ' + (ri + 1) + ' of ' + rounds.length + (round.afterVersion ? ', v' + round.afterVersion : '')) : null,
                  bounds: fr.bounds || null,
