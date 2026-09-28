@@ -236,6 +236,9 @@
       var addinfo = $('aicheck-addinfo'), rsum = $('readerSummary');
       if (addinfo && rsum) { var part = document.createElement('div'); part.className = 'addinfo-part'; part.innerHTML = '<h4>How the reader read this page</h4>'; part.appendChild(rsum); addinfo.insertBefore(part, addinfo.lastElementChild); }   // between what the check worked to and the layout details
       var jobfoot = $('aicheck-jobfoot'), footEl = $('foot'); if (jobfoot && footEl) jobfoot.appendChild(footEl);
+      // which build is on screen: the first question a caching problem raises (Benn, 2026-09-28: "I don't see judgement on
+      // any entry" — on a build that had them)
+      var buildEl = $('aicheck-build'); if (buildEl) buildEl.textContent = 'AI Check plug-in ' + VERSION;
       var topPart = $('aicheck-addinfo-top'), toolbar = document.querySelector('.aicheck-app .toolbar'); if (topPart && toolbar) topPart.appendChild(toolbar);
       // Nothing loaded yet: the design's card, so the app says what it is and what happens next (Figma 2015:4)
       var empty = document.createElement('div'); empty.className = 'emptystate'; empty.id = 'aicheck-empty';

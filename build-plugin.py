@@ -46,6 +46,7 @@ def studio_markup(m):
         '  <div class="decide-row"><button class="btn primary" id="aicheck-send" disabled>Send</button><span id="aicheck-msg" class="appmsg"></span></div>'
         # the explanation and the run's own footnote live in the fold, not on the screen (Benn, 2026-09-22: less noise)
         '  <details class="jobdetails"><summary>Job details and Send info</summary>'
+        '    <p class="jobhint build" id="aicheck-build"></p>'
         '    <p class="jobhint">Send is all you do. The fixes are then applied in the background, usually within a minute, and the result of each one appears at the top of this page. You do not need to open InDesign. (If the layout is open in InDesign, close it first: the fixes wait until it is free.)</p>'
         '    <div class="jobfoot" id="aicheck-jobfoot"></div>'
         '    <label>Fixes (Actions)<textarea id="actions" readonly spellcheck="false"></textarea></label><button class="btn" id="copyActions">Copy</button>'
@@ -86,6 +87,7 @@ STUDIO_CSS = """
 .aicheck-app #aicheck-sidehead,.aicheck-app .top.compact{background:var(--paper)}
 .aicheck-app #aicheck-addinfo .addinfo-part:has(> .readersum[hidden]){display:none}   /* a report with no reader's account (rule checks only): no empty heading */
 .aicheck-app .jobdetails .jobhint{margin:8px 0;color:var(--ink-2);font-size:12.5px;line-height:1.5}
+.aicheck-app .jobdetails .build{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink-3)}
 .aicheck-app .jobdetails .jobfoot .foot{padding:0;margin:0 0 10px;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;font-size:11.5px;color:var(--ink-3)}
 .aicheck-app .es-build{margin-top:18px;font-size:11px;color:var(--ink-3)}   /* panels are display:flex, which otherwise beats the hidden attribute */
 /* nothing loaded: the whole width, whatever column split the person dragged last time — that is kept on the element
