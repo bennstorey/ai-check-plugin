@@ -164,6 +164,8 @@
     var D = ReviewEnrich.buildData(report, images, 'Report ' + report.runId + ' on ' + S.obj.MetaData.BasicMetaData.Name + ' v' + S.obj.MetaData.WorkflowMetaData.Version + '; previews from Studio at that version.');
     if (!D.layout.template) { var tid = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_ID'), tnm = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_NAME'); if (tid || tnm) D.layout.template = { id: tid || null, name: tnm || null }; }
     var pub = S.obj.MetaData.BasicMetaData.Publication; D.layout.brand = (pub && pub.Name) || null;   // an "always" rule is scoped to the brand
+    // what has already been applied to this layout: the list collapses those findings to one line each (Benn, 2026-09-28)
+    try { D.applied = JSON.parse(extraOf(S.obj, CFG.actionsField) || 'null'); } catch (e2) { D.applied = null; }
     if (window.__aiCheckShowWork) window.__aiCheckShowWork(true);
     fitHeight();
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
