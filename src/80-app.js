@@ -227,7 +227,7 @@
     // `name` is the app's id in the URL and must not change; `title` is what people read in the Apps menu.
     // Studio takes iconUrl as it stands when it is absolute, so the icon is served beside the plug-in itself.
     name: 'ai-check', title: 'AI layout check',
-    iconUrl: 'https://bennstorey.github.io/ai-check-plugin/dist/icons/tile-spread-check.svg',
+    iconUrl: 'https://bennstorey.github.io/ai-check-plugin/dist/icons/spread-check.svg',
     content: '<div class="aicheck-tabs"><button class="aicheck-tab" id="aicheck-tab-check" aria-pressed="true">Check</button><button class="aicheck-tab" id="aicheck-tab-ba" aria-pressed="false">Before &amp; after</button></div>' + BAR + '<div id="aicheck-view-check"><div class="aicheck-app" data-theme="light">' + PICKER + PAGE_HTML + '</div></div>' + '<div id="aicheck-view-ba" hidden></div>',
     onInit: function () {
       loadMe();   // who is using this, so what they decide is recorded under their name and they can be told about it
