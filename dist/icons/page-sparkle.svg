@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="AI layout check">
+  <g fill="none" stroke="#1f2933" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 4.5h13l7 7v16a1.5 1.5 0 0 1-1.5 1.5h-18A1.5 1.5 0 0 1 5 27.5v-21A1.5 1.5 0 0 1 6.5 4.5z"/>
+    <path d="M19 4.5V11a1 1 0 0 0 1 1h6"/>
+    <path d="M9 17h7M9 21h10M9 25h6"/>
+  </g>
+  <path d="M23.5 16.2l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z" fill="#2fa0a4"/>
+</svg>

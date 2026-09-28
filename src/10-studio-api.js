@@ -2,6 +2,16 @@
   var WW_APP = 'Content Station';
   var WW_APP_HEADER = { 'X-WoodWing-Application': WW_APP };
   function getTicket() { try { var info = ContentStationSdk.getInfo(); return (info && info.Ticket) || ''; } catch (e) { return ''; } }
+  // Who is using the plug-in. The SDK's info block carries the ticket but no user on this server, so `decidedBy` came
+  // back null and the layout agent had to infer the requester from whoever last touched the layout (2026-09-28). The
+  // documented GetUserProfile answers it properly, and hands back the PublicUuid — which is exactly what an @mention in
+  // the Activity hub needs, so the person who pressed Send can be told by name.
+  var ME = null;
+  function loadMe() {
+    return callServer('GetUserProfile', { __classname__: 'WflGetUserProfileRequest' })
+      .then(function (r) { var u = (r && r.CurrentUser) || {}; ME = { userId: u.UserID || '', name: u.FullName || u.UserID || '', uuid: u.PublicUuid || '' }; return ME; })
+      .catch(function () { return null; });
+  }
   function serverUrl(script) { var base = (window.csConfig && window.csConfig.serverUrl) || '/server/index.php'; return new URL(base.replace(/[^/]+$/, script), window.location.href).href; }
   function callServer(method, params) {
     params = params || {}; if (!('Ticket' in params) || !params.Ticket) params.Ticket = getTicket() || null;
