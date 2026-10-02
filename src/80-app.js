@@ -10,16 +10,20 @@
   // one place to choose a layout (and Before & after no longer needs controls of its own).
   var BAR = '' +
     '<div class="aicheck-app aicheck-barwrap" data-theme="light"><div class="aicheck-bar" id="aicheck-picker">' +
-    '  <label>Layout or template <input id="aicheck-id" size="7" placeholder="ID"></label>' +
-    '  <button class="btn primary" id="aicheck-load">Load</button>' +
-    '  <label class="dim">in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
+    // A person picks the layout they were asked to look at, from the ones that have been sent for a check. Typing an
+    // id, and reading a report off this Mac, are OURS: they live behind the eye at the end of the bar and are not part
+    // of what a desk sees (Benn, 2026-10-02: "it's useful for development, but not for the production version").
+    '  <label class="devonly" hidden>Layout or template <input id="aicheck-id" size="7" placeholder="ID"></label>' +
+    '  <button class="btn primary devonly" id="aicheck-load" hidden>Load</button>' +
+    '  <label>Select a layout <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
     '  <button class="btn" id="aicheck-request" disabled>Request a check</button>' +
     '  <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
     // Studio's own per-object route — the one its "open in new tab" uses (Benn, 2026-10-02):
     //   <studio>/app/#/ids/IDs=<objectId>. For when the person reading the findings is the one making the edits.
     '  <button class="btn" id="aicheck-instudio" disabled>Show in Studio</button>' +
-    '  <label class="btn" title="For development: show a report from a file on this Mac, without Studio">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
+    '  <label class="btn devonly" hidden title="For development: show a report from a file on this Mac, without Studio">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '  <span id="aicheck-msg0" class="appmsg"></span>' +
+    '  <button class="ib devtoggle" id="aicheck-dev" title="Development tools: load a layout by id, and read a report from a file">◉</button>' +
     '</div></div>';
   // the head of the right-hand column: what became of the last fixes, and ONE fold for everything else
   // ONE fold for everything that is not the list (Benn, 2026-09-22): the last fixes and the list's controls at its top,
@@ -66,7 +70,7 @@
     // one exact-match query per value: range/inequality operators on this server return nothing silently
     var chain = Promise.resolve();
     values.forEach(function (v) { chain = chain.then(function () { return callServer('QueryObjects', { Params: [{ Property: 'Type', Operation: '=', Value: 'Layout', __classname__: 'QueryParam' }, { Property: CFG.checkField, Operation: '=', Value: v, __classname__: 'QueryParam' }], MinimalProps: ['ID', 'Name', CFG.checkField], MaxEntries: 50, __classname__: 'WflQueryObjectsRequest' }).then(function (r) { var cols = (r.Columns || []).map(function (c) { return c.Name; }); (r.Rows || []).forEach(function (row) { var o = {}; cols.forEach(function (c, i) { o[c] = row[i]; }); rows.push(o); }); }).catch(function () {}); }); });
-    chain.then(function () { sel.innerHTML = '<option value="">' + (rows.length ? 'choose…' : 'none in progress') + '</option>'; rows.forEach(function (o) { var op = document.createElement('option'); op.value = o.ID; op.textContent = o.Name + ' (' + o.ID + ') · ' + (o[CFG.checkField] || ''); sel.appendChild(op); }); });
+    chain.then(function () { sel.innerHTML = '<option value="">' + (rows.length ? 'choose…' : 'nothing waiting for a check') + '</option>'; rows.forEach(function (o) { var op = document.createElement('option'); op.value = o.ID; op.textContent = o.Name + ' (' + o.ID + ') · ' + (o[CFG.checkField] || ''); sel.appendChild(op); }); });
   }
 
   // What became of the fixes that were last sent: the check-in scripts write a result per fix back beside the decisions.
@@ -282,7 +286,7 @@
       empty.innerHTML = '<div class="es-card">' +
         '<div class="es-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="14" y="13" width="7" height="8" rx="1.5"></rect></svg></div>' +
         '<h3>No layout loaded</h3>' +
-        '<p>Type a layout or template ID and press Load, or pick one from “in progress” above.</p>' +
+        '<p>Pick the layout you have been asked to look at from the list at the top.</p>' +
         '<ol class="es-steps"><li><span>1</span>Load the layout you are working on</li>' +
         '<li><span>2</span>Read what the check found, and decide each one</li>' +
         '<li><span>3</span>Press Send — the fixes are applied in the background, without opening InDesign</li></ol>' +
@@ -302,6 +306,16 @@
       document.addEventListener('aicheck:view', function () { fitPage(); });   // the page script says when it shows a different page or spread
       var foot = document.getElementById('foot'); if (foot) { foot.textContent = 'AI Check plug-in ' + VERSION; foot.setAttribute('data-fixed', '1'); }
       $('aicheck-load').onclick = function () { var id = $('aicheck-id').value.trim(); if (id) loadLayout(id); };
+      (function () {                      // the development tools, hidden unless this browser has asked for them
+        var btn = $('aicheck-dev'); if (!btn) return;
+        function show(on) {
+          Array.prototype.forEach.call(document.querySelectorAll('.aicheck-bar .devonly'), function (el) { el.hidden = !on; });
+          btn.classList.toggle('on', !!on); btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        var on = false; try { on = localStorage.getItem('aicheck-dev') === 'on'; } catch (e) {}
+        show(on);
+        btn.onclick = function () { on = !on; try { localStorage.setItem('aicheck-dev', on ? 'on' : 'off'); } catch (e) {} show(on); };
+      })();
       $('aicheck-list').onchange = function () { if (this.value) { $('aicheck-id').value = this.value; loadLayout(this.value); } };
       $('aicheck-file').onchange = function () { var f = this.files[0]; if (!f || !S.obj) { say('Load the layout first.', 'warn'); return; } var rd = new FileReader(); rd.onload = function () { try { buildPage(JSON.parse(rd.result)); } catch (e) { say('Not a runner report: ' + e.message, 'err'); } }; rd.readAsText(f); };
       $('aicheck-request').onclick = requestCheck; $('aicheck-request').title = REVIEW_TIPS.request;

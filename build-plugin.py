@@ -76,6 +76,9 @@ STUDIO_CSS = """
 .aicheck-app .aicheck-bar input,.aicheck-app .aicheck-bar select{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:5px 9px;font-size:13px}
 .aicheck-app .aicheck-bar input{width:96px}.aicheck-app .aicheck-bar select{min-width:260px;max-width:340px}
 .aicheck-app .aicheck-bar .btn{white-space:nowrap}
+/* the development tools sit behind this, at the end of the bar, and are not part of what a desk sees */
+.aicheck-app .aicheck-bar .devtoggle{margin-left:auto;font-size:11px}
+.aicheck-app .aicheck-bar [hidden]{display:none!important}
 /* one fold for the extras */
 .aicheck-app #aicheck-addinfo .addinfo-part{margin:6px 0 10px}
 .aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}
