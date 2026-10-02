@@ -135,8 +135,15 @@ report = {
     'timing': {}, 'placedArticles': [], 'workedTo': None,
 }
 
+PAGE_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" width="820" height="1020">'
+            '<rect width="820" height="1020" fill="#fbfbfa"/>'
+            '<text x="410" y="520" text-anchor="middle" font-family="Helvetica" font-size="26" fill="#cbd5e1">'
+            'an invented page</text></svg>')
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
+    with open(os.path.join(OUT, 'page-1.svg'), 'w') as fh:
+        fh.write(PAGE_SVG)
     with open(os.path.join(OUT, 'report.json'), 'w') as fh:
         json.dump(report, fh, indent=1)
     print('states-data/report.json: %d findings on %d frames' % (len(F), len(FRAMES)))

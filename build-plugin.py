@@ -42,8 +42,8 @@ def studio_markup(m):
     m = re.sub(r'<header class="top">.*?</header>', '<div class="top compact"><span class="eyebrow" id="eyebrow">AI Check</span><span id="title" class="ttl"></span><span class="sub" id="subtitle"></span><span class="chips" id="chips"></span></div>', m, flags=re.S)
     decide = (
         '<div class="out decide">'
-        '  <div class="decide-row"><span class="sum" id="actSum"></span><span class="sum" id="todoSum"></span><span class="sum" id="ignSum"></span></div>'
         '  <div class="decide-row"><button class="btn primary" id="aicheck-send" disabled>Send</button><span id="aicheck-msg" class="appmsg"></span></div>'
+        '  <div class="decide-row counts"><span class="sum" id="actSum"></span><span class="sum" id="todoSum"></span><span class="sum" id="ignSum"></span></div>'
         # the explanation and the run's own footnote live in the fold, not on the screen (Benn, 2026-09-22: less noise)
         '  <details class="jobdetails"><summary>Job details and Send info</summary>'
         '    <p class="jobhint build" id="aicheck-build"></p>'
@@ -125,6 +125,11 @@ STUDIO_CSS = """
 .aicheck-app .out.decide{position:sticky;bottom:0;display:flex;flex-direction:column;gap:6px;padding:8px 12px;background:var(--paper);border-top:2px solid var(--accent)}
 .aicheck-app .decide-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
 .aicheck-app .decide-row.hint{color:var(--ink-3);font-size:12px}
+.aicheck-app .decide-row.counts{color:var(--ink-2);font-size:12.5px}
+/* the one button that does something: half again as deep as an ordinary button, and no focus ring on it */
+.aicheck-app .out.decide .btn.primary{font-size:15px;font-weight:700;padding:10px 20px;border-radius:8px}
+.aicheck-app .out.decide .btn.primary:focus{outline:none}
+.aicheck-app .out.decide .btn.primary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .aicheck-app .jobdetails{font-size:12px;color:var(--ink-3)}
 .aicheck-app .jobdetails summary{cursor:pointer}
 .aicheck-app .jobdetails label{display:block;margin-top:6px}
