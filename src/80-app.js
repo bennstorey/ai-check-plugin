@@ -180,13 +180,14 @@
   function whoAmI() { if (ME && ME.name) return ME.name; try { var i = ContentStationSdk.getInfo() || {}; var u = i.User || i.user || {}; return u.FullName || u.UserName || u.Name || i.UserName || i.FullName || i.User || ''; } catch (e) { return ''; } }
   function myUuid() { return (ME && ME.uuid) || null; }
   function send() {
-    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [], houseNotes = out.houseNotes || [], corrections = out.corrections || [];
+    var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [], houseNotes = out.houseNotes || [], corrections = out.corrections || []
+    var stickies = out.stickies || [];   // notes to leave on the layout for the designer (2026-10-02)
     var labelsDecided = Object.keys(out.labels || {}).filter(function (k) { return out.labels[k]; }).length;
-    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided && !houseNotes.length && !corrections.length) { say('No decisions yet.', 'warn'); return; }
+    if (!acts.length && !rules.length && !ign.length && !todos.length && !labelsDecided && !houseNotes.length && !corrections.length && !stickies.length) { say('No decisions yet.', 'warn'); return; }
     // which section's knowledge a house note belongs to: the guide the check worked to (its name, without the caveat a
     // guide chosen by page size alone carries in older reports)
     var sg = (S.report.workedTo || {}).styleGuide, sgName = sg ? (typeof sg === 'string' ? sg.split(' (')[0] : (sg.name || null)) : null;
-    var payload = { runId: S.report.runId, styleGuide: sgName, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), decidedById: (ME && ME.userId) || null, decidedByUuid: myUuid(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos,
+    var payload = { runId: S.report.runId, styleGuide: sgName, decidedAt: new Date().toISOString(), decidedBy: whoAmI(), decidedById: (ME && ME.userId) || null, decidedByUuid: myUuid(), actions: acts, ignore: ign, rules: rules, labels: out.labels || {}, labelText: out.labelText || {}, todos: todos, stickies: stickies,
       // kept, not ignored: these go into the section's house notes, which is what the next check works to
       houseNotes: houseNotes.map(function (h) { return { says: h.says, kind: h.kind || 'keep', from: whoAmI(), on: new Date().toISOString().slice(0, 10), fromLayout: S.obj.MetaData.BasicMetaData.ID }; }),
       // where a person overruled the AI reader: who, when, on which version (Benn, 2026-09-22)
