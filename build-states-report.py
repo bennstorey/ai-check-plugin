@@ -62,7 +62,10 @@ folio = frame(108, 'FO Folio', 'furniture', 960, 60, 24, 620, origin='master', s
 side = frame(109, 'SB Sidebar Text', 'body', 690, 400, 240, 280, roleFrom='frame type', roleStatus='guessed',
              snippet='Three things the inspectors found when they walked the deck in March')
 
-FRAMES = [head1, body1, body2, pic1, pic2, quote, cap1, folio, side]
+rule2 = frame(110, 'RL Folio Rule', 'furniture', 952, 60, 4, 620, kind='GraphicLine', origin='master',
+              roleFrom='frame type')
+
+FRAMES = [head1, body1, body2, pic1, pic2, quote, cap1, folio, side, rule2]
 
 F = [
     # a mistake, very sure, with a fix — the ordinary case
@@ -117,6 +120,12 @@ F = [
     finding('s-master', folio, 'info', 'Folio is 2 pt below where the template puts it',
             'The folio sits at 960 pt; the template’s folio sits at 958 pt.',
             judgement='ask', confidence='medium', origin='master', master='A-Feature',
+            originWords='From the master page “A-Feature”, so every page inherits it.'),
+    # the same master-page case NOT yet flagged, so the two states of the flag sit next to each other: the states page
+    # is only worth having if it shows a button before AND after it is pressed (Benn, 2026-10-02)
+    finding('s-master-2', rule2, 'info', 'Rule line under the folio is a hairline',
+            'The rule under the folio is 0.25 pt; the template draws it at 0.5 pt.',
+            judgement='slip', confidence='low', origin='master', master='A-Feature',
             originWords='From the master page “A-Feature”, so every page inherits it.'),
     # a rule check: no judgement of mine, no fold title of my own
     finding('s-rule', body1, 'info', None,
