@@ -172,6 +172,8 @@
     var D = ReviewEnrich.buildData(report, images, 'Report ' + report.runId + ' on ' + S.obj.MetaData.BasicMetaData.Name + ' v' + S.obj.MetaData.WorkflowMetaData.Version + '; previews from Studio at that version.');
     if (!D.layout.template) { var tid = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_ID'), tnm = extraOf(S.obj, 'C_LAYOUT_TEMPLATE_NAME'); if (tid || tnm) D.layout.template = { id: tid || null, name: tnm || null }; }
     var pub = S.obj.MetaData.BasicMetaData.Publication; D.layout.brand = (pub && pub.Name) || null;   // an "always" rule is scoped to the brand
+    // the report records the status as it was when the check ran, and often not at all; Studio knows it now (Benn, 2026-10-02)
+    var live = S.obj.MetaData.WorkflowMetaData.State; if (live && live.Name) D.layout.status = live.Name;
     // what has already been applied to this layout: the list collapses those findings to one line each (Benn, 2026-09-28)
     try { D.applied = JSON.parse(extraOf(S.obj, CFG.actionsField) || 'null'); } catch (e2) { D.applied = null; }
     if (window.__aiCheckShowWork) window.__aiCheckShowWork(true);
