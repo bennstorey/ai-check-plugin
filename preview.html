@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>AI Check — preview (the real plug-in, no Studio)</title>
+<!--
+  The plug-in exactly as Studio loads it, against a fake Studio, so the design can be worked on without a layout,
+  a check-in or a licence — the same trick the Re-use content plug-in uses (its plugin/preview.html).
+
+  What is real: dist/ai-check-plugin.js (the built plug-in), the page script inside it, a real saved report, and the
+  real page previews. What is faked: the Studio SDK, the web services, and Send — which logs what it WOULD write
+  instead of writing it.
+
+      sh 04-scripts/studio-plugin/preview.sh          # fills preview-data/ from the newest run and serves this page
+
+  The pane buttons matter: Studio's app pane is often far narrower than a browser window, and buttons that only
+  appear on hover do not exist for a person on a narrow pane.
+-->
+<style>
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:#e9edf1;color:#0f172a}
+  .bar{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#0f172a;color:#fff;font-size:12px}
+  .bar b{font-weight:700}
+  .bar button{font:inherit;padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#fff;cursor:pointer}
+  .bar button.on{background:#f59e0b;border-color:#f59e0b;color:#111827;font-weight:700}
+  .bar .sp{flex:1 1 auto}
+  /* Studio's app pane is a fixed-height region and the plug-in flexes to fill it (.aicheck-app .stage is min-height:0).
+   Without a height here the page preview collapses to nothing — which is exactly what it did (2026-10-02). */
+/* a preset must never be wider than the window, or the PAGE scrolls sideways and the panel looks cut off when it is
+   not — that is the harness lying about the plug-in (Benn, 2026-10-02) */
+.pane{margin:0 auto;background:#fff;height:calc(100vh - 42px);max-width:100%;overflow:auto;box-shadow:0 0 0 1px #cbd5e1}
+  .log{position:fixed;right:0;bottom:0;width:min(520px,46vw);max-height:42vh;overflow:auto;background:#0f172a;color:#cbd5e1;font:11px/1.45 ui-monospace,Menlo,monospace;padding:8px 10px;z-index:60;border-top-left-radius:8px}
+  .log b{color:#fbbf24}
+  .log:empty{display:none}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>AI Check preview</b>
+  <span>pane:</span>
+  <button data-w="wide">wide</button>
+  <button data-w="1100">1100</button>
+  <button data-w="899">899</button>
+  <button data-w="640">640</button>
+  <button data-w="420">420</button>
+  <span class="sp"></span>
+  <span id="build">build —</span>
+  <button id="clearlog">clear log</button>
+</div>
+<div class="pane" id="pane"></div>
+<div class="log" id="log"></div>
+
+<script>
+// ---- the fake Studio ---------------------------------------------------------------------------------------------
+(function () {
+  var log = document.getElementById('log');
+  function say(what, detail) {
+    var d = document.createElement('div');
+    d.innerHTML = '<b>' + what + '</b> ' + (detail ? String(detail).replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) : '');
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  document.getElementById('clearlog').onclick = function () { log.innerHTML = ''; };
+
+  window.csConfig = { serverUrl: '/server/index.php' };
+
+  // Every Studio web service the plug-in calls, answered from the fake. Anything not answered here is logged loudly,
+  // so a new call cannot pass unnoticed.
+  var FAKE = {
+    QueryObjects: function () { return { Columns: [{ Name: 'ID' }, { Name: 'Name' }, { Name: 'C_AI_CHECK' }], Rows: [] }; },
+    GetUserProfile: function () { return { CurrentUser: { UserID: 'benn.storey', FullName: 'Benn Storey', PublicUuid: 'faf5b030-0000-0000-0000-000000000000' } }; },
+    GetStates: function () { return { States: [] }; },
+    ListVersions: function () { return { Versions: [] }; },
+    SetObjectProperties: function (p) {
+      say('Send → SetObjectProperties', 'object ' + p.ID);
+      try {
+        (p.MetaData.ExtraMetaData || []).forEach(function (x) {
+          var v = String(x.Values[0] || '');
+          if (x.Property === 'C_AI_ACTIONS') { var j = JSON.parse(v);
+            say('  decisions', (j.actions || []).length + ' fixes · ' + (j.stickies || []).length + ' notes · ' + (j.ignore || []).length + ' ignored · ' + (j.corrections || []).length + ' corrections'); }
+          else say('  ' + x.Property, v.slice(0, 80));
+        });
+      } catch (e) { say('  (could not read the payload)', e.message); }
+      return {};
+    },
+    GetObjects: function (p) { say('GetObjects', (p.IDs || []).join(',')); return { Objects: [] }; }
+  };
+
+  var realFetch = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    var u = String(url);
+    if (u.indexOf('index.php') >= 0) {
+      var m = /method=([^&]+)/.exec(u), name = m ? decodeURIComponent(m[1]) : '?';
+      var body = {}; try { body = JSON.parse(opts.body).params[0]; } catch (e) {}
+      var fn = FAKE[name];
+      if (!fn) say('UNANSWERED Studio call', name);
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ result: fn ? fn(body) : {} }); } });
+    }
+    return realFetch(url, opts);                      // the report and the page images are real files
+  };
+
+  window.ContentStationSdk = {
+    getInfo: function () { return { Ticket: 'preview', User: 'benn.storey' }; },
+    showNotification: function (o) { say('notification', o && o.content); },
+    onSignin: function () {}, onSignout: function () {},
+    registerCustomApp: function (app) {
+      var pane = document.getElementById('pane');
+      pane.innerHTML = app.content;
+      say('plug-in registered', app.title || app.name);
+      setTimeout(function () { try { app.onInit && app.onInit(); } catch (e) { say('onInit failed', e.message + ' — ' + (e.stack || '').split('\n')[1]); } }, 0);
+    }
+  };
+
+  // the layout the preview shows: a real saved report and the real page previews, filled in by preview.sh
+  window.__aiCheckDemo = {
+    id: '93098', name: 'HOM1907burnhamodyssey', version: '0.14',
+    previews: { '10': 'preview-data/page-10.jpg', '11': 'preview-data/page-11.jpg' },
+    report: 'preview-data/report.json'
+  };
+
+  // pane width — Studio's pane is often much narrower than this window
+  var pane = document.getElementById('pane');
+  function setW(w) {
+    pane.style.width = (w === 'wide' ? '100%' : w + 'px');
+    Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.classList.toggle('on', b.dataset.w === String(w)); });
+    try { localStorage.setItem('aicheck-preview-w', String(w)); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.onclick = function () { setW(b.dataset.w); }; });
+  var saved; try { saved = localStorage.getItem('aicheck-preview-w'); } catch (e) {}
+  setW(saved === '1500' ? 'wide' : (saved || 'wide'));       // '1500' is the old meaning of "wide"; it scrolled the page
+  window.addEventListener('error', function (e) { say('error', e.message); });
+})();
+</script>
+<script src="dist/ai-check-plugin.js"></script>
+<script>
+  (function () { var v = (window.AI_CHECK_VERSION || (document.querySelector('script[src*="ai-check-plugin"]') ? 'loaded' : '—'));
+    document.getElementById('build').textContent = 'build ' + v; })();
+</script>
+</body>
+</html>

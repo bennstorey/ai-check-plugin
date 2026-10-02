@@ -63,7 +63,9 @@ def studio_markup(m):
     return m
 STUDIO_CSS = """
 .aicheck-app .wrap[hidden]{display:none}
-.aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden}
+/* the app measures ITSELF, not the browser window: Studio's pane can be far narrower than the window, and a media
+   query would never notice (Benn, 2026-10-02 — the columns stayed side by side and the findings ran off the edge) */
+.aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden;container-type:inline-size}
 .aicheck-app .apppanel{margin:0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex:0 0 auto;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}
 .aicheck-app [hidden]{display:none!important}
 /* the bar (Figma 2004:338): one row under the tabs, full width, always there */
@@ -78,7 +80,7 @@ STUDIO_CSS = """
 .aicheck-app #aicheck-addinfo .addinfo-part{margin:6px 0 10px}
 .aicheck-app #aicheck-addinfo h4{margin:6px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)}
 .aicheck-app #aicheck-addinfo .readersum{margin:6px 0 10px;padding:0;border:0;background:transparent}
-.aicheck-app #aicheck-addinfo .addinfo-alert{color:#991B1B;font-weight:600}
+.aicheck-app #aicheck-addinfo .addinfo-alert{color:#c80909;font-weight:600}
 .aicheck-app #aicheck-addinfo .toolbar{padding:8px 0 4px;border:0;background:transparent}
 .aicheck-app #aicheck-addinfo .addinfo-top .lastpass{margin-top:4px}
 /* the list of changes on #EEEEEE (Benn, 2026-09-22), filling the column */
@@ -92,12 +94,12 @@ STUDIO_CSS = """
 .aicheck-app .es-build{margin-top:18px;font-size:11px;color:var(--ink-3)}   /* panels are display:flex, which otherwise beats the hidden attribute */
 /* nothing loaded: the whole width, whatever column split the person dragged last time — that is kept on the element
    itself and would otherwise win, leaving the empty card centred in the old left column (Benn, 2026-09-22) */
-.aicheck-app main.wrap.nowork{grid-template-columns:1fr!important}
+.aicheck-app main.wrap.nowork{grid-template-columns:minmax(0,1fr)!important}
 /* the empty state, from the design (Figma 2015:4): the picker on its band, one card centred in the room below */
 .aicheck-app .apppanel{background:var(--ground)}
 .aicheck-app .emptystate{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .aicheck-app .es-card{max-width:480px;width:100%;background:var(--ground);border:1px solid var(--line);border-radius:12px;padding:28px 30px;text-align:center}
-.aicheck-app .es-icon{width:58px;height:58px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.aicheck-app .es-icon{width:58px;height:58px;border-radius:50%;background:var(--accent-soft);color:var(--ink);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
 .aicheck-app .es-card h3{margin:0 0 8px;font-size:17px;font-weight:600;color:var(--ink)}
 .aicheck-app .es-card p{margin:0 auto 18px;max-width:400px;color:var(--ink-2);font-size:13px;line-height:1.5}
 .aicheck-app .es-steps{list-style:none;margin:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:10px}
@@ -108,10 +110,10 @@ STUDIO_CSS = """
 .aicheck-app .approw label{display:inline-flex;gap:6px;align-items:center}
 .aicheck-app .approw input,.aicheck-app .approw select{border:1px solid var(--line);background:var(--ground);color:var(--ink);border-radius:4px;padding:4px 8px;font-size:13px;max-width:260px}
 .aicheck-app .appmsg{padding:3px 8px;border-radius:4px;font-size:13px}
-.aicheck-app .appmsg.ok{background:var(--accent-soft);color:var(--accent)} .aicheck-app .appmsg.warn{background:var(--warn-soft);color:var(--warn)} .aicheck-app .appmsg.err{background:var(--block-soft);color:var(--block)}
+.aicheck-app .appmsg.ok{background:var(--accent-soft);color:var(--ink)} .aicheck-app .appmsg.warn{background:var(--warn-soft);color:var(--warn)} .aicheck-app .appmsg.err{background:var(--block-soft);color:var(--block)}
 .aicheck-app .top.compact{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;flex:0 0 auto}
 .aicheck-app .top.compact .ttl{font-weight:600;font-size:15px}
-.aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 8px 1fr;grid-template-rows:minmax(0,1fr);gap:8px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
+.aicheck-app main.wrap{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(300px,40%) 8px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:8px;padding:8px 12px 12px;max-width:none;margin:0;overflow:hidden}
 .aicheck-app .splitter{cursor:col-resize;background:var(--line);border-radius:4px;align-self:stretch;touch-action:none}
 .aicheck-app .splitter:hover,.aicheck-app .splitter.active{background:var(--accent)}
 .aicheck-app main.wrap>.panel{min-height:0;overflow:auto;display:flex;flex-direction:column}
@@ -131,16 +133,16 @@ STUDIO_CSS = """
 .aicheck-app .approw .line{color:var(--ink);font-size:12px}
 /* the design's amber banner (Figma 2004:338): one notice, not a bordered fold */
 .aicheck-app .lastpass{font-size:12.5px;margin:8px 0 4px;padding:9px 12px;background:var(--banner,#FFFBEB);border:1px solid var(--banner-line,#FDE68A);border-radius:8px}
-.aicheck-app .lastpass summary{color:#92400E}
+.aicheck-app .lastpass summary{color:#c86b00}
 .aicheck-app .lastpass.bad{background:#FEF2F2;border-color:#FECACA}
-.aicheck-app .lastpass.bad summary{color:#991B1B}
+.aicheck-app .lastpass.bad summary{color:#c80909}
 .aicheck-app .lastpass summary{cursor:pointer;font-weight:600}
 .aicheck-app .lastpass ul{margin:6px 0 2px;padding-left:4px;list-style:none;max-height:180px;overflow:auto}
 .aicheck-app .lastpass li{margin:2px 0}.aicheck-app .lastpass li.bad{color:#c62828}.aicheck-app .lastpass li.again{color:var(--ink-3,#6b6b6b)}
 .aicheck-app .appdetails{font-size:12px;color:var(--ink-3)}
 .aicheck-app .appdetails summary{cursor:pointer}
 .aicheck-app .appdetails .approw{margin-top:4px}
-@media (max-width:900px){.aicheck-app main.wrap{grid-template-columns:1fr;grid-template-rows:auto;overflow:auto}.aicheck-app .splitter{display:none}}
+@container (max-width:900px){.aicheck-app main.wrap{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;overflow:auto}.aicheck-app .splitter{display:none}}
 """
 def js_string(s): return "'" + s.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n').replace('</script', '<\\/script') + "'"
 srcs = sorted(f for f in os.listdir(os.path.join(HERE, 'src')) if f.endswith('.js') and not f.startswith('_'))

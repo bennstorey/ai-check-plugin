@@ -46,8 +46,13 @@
   function initSplitter() {
     var sp = $('aicheck-split'), main = document.querySelector('.aicheck-app main.wrap'); if (!sp || !main) return;
     var KEY = 'aicheck-split', down = null;
-    function apply(px) { var max = main.clientWidth - 380; if (px < 260) px = 260; if (px > max) px = max; main.style.gridTemplateColumns = px + 'px 8px 1fr'; return px; }
-    try { var saved = parseInt(localStorage.getItem(KEY), 10); if (saved > 0) apply(saved); } catch (e) {}
+    // a dragged width is an inline style, so it would beat the one-column rule the container query applies on a narrow
+    // pane — below 900px the saved width is simply not applied, and it comes back when there is room again
+    function apply(px) { if (main.clientWidth <= 900) { main.style.gridTemplateColumns = ''; return px; }
+      var max = main.clientWidth - 380; if (px < 260) px = 260; if (px > max) px = max; main.style.gridTemplateColumns = px + 'px 8px minmax(0,1fr)'; return px; }   // minmax(0,…): a bare 1fr refuses to go below its min-content, and the findings column then pushes the pane off the screen
+    function saved() { try { var n = parseInt(localStorage.getItem(KEY), 10); return n > 0 ? n : 0; } catch (e) { return 0; } }
+    if (saved()) apply(saved());
+    if (window.ResizeObserver) { try { new ResizeObserver(function () { if (saved()) apply(saved()); else if (main.clientWidth <= 900) main.style.gridTemplateColumns = ''; }).observe(main); } catch (e) {} }
     sp.addEventListener('pointerdown', function (ev) { if (ev.button !== 0) return; var vw = main.querySelector('.viewer'); down = { x: ev.clientX, w: vw ? vw.getBoundingClientRect().width : 400 }; sp.classList.add('active'); try { sp.setPointerCapture(ev.pointerId); } catch (e) {} ev.preventDefault(); });
     sp.addEventListener('pointermove', function (ev) { if (!down) return; apply(down.w + (ev.clientX - down.x)); });
     function up() { if (!down) return; down = null; sp.classList.remove('active'); var vw = main.querySelector('.viewer'); try { if (vw) localStorage.setItem(KEY, String(Math.round(vw.getBoundingClientRect().width))); } catch (e) {} }
@@ -186,6 +191,19 @@
   // who is deciding: asked of the server once, when the app loads (loadMe); the SDK's info block is the fallback
   function whoAmI() { if (ME && ME.name) return ME.name; try { var i = ContentStationSdk.getInfo() || {}; var u = i.User || i.user || {}; return u.FullName || u.UserName || u.Name || i.UserName || i.FullName || i.User || ''; } catch (e) { return ''; } }
   function myUuid() { return (ME && ME.uuid) || null; }
+  // Studio's own wording for a locked object reads backwards to the person in front of it: "the file is not
+  // checked-out" means THEY do not hold the lock, usually because the layout is open in InDesign (Benn, 2026-10-02).
+  function plainError(e, id) {
+    var m = (e && e.message) || String(e);
+    if (/S1030|not checked-?out/i.test(m)) {
+      var by = '';
+      try { by = (S.obj && S.obj.MetaData.WorkflowMetaData.LockedBy) || ''; } catch (x) {}
+      return 'Nothing was sent: this layout is open in InDesign' + (by ? ' (in use by ' + by + ')' : '')
+           + '. Close it there, or check it in, then press Send again — your decisions are still here.';
+    }
+    if (/S10\d\d/.test(m) && /lock/i.test(m)) return 'Nothing was sent: somebody else has this layout. Try again when they have checked it in.';
+    return m;
+  }
   function send() {
     var out = window.REVIEW_OUT || {}, acts = out.actions || [], rules = out.rules || [], ign = out.ignore || [], todos = out.todos || [], houseNotes = out.houseNotes || [], corrections = out.corrections || []
     var stickies = out.stickies || [];   // notes to leave on the layout for the designer (2026-10-02)
@@ -211,8 +229,8 @@
     // "nothing was sent" (Benn, 2026-10-02).
     var forWatcher = acts.length || houseNotes.length || corrections.length || stickies.length;
     if (forWatcher) props[CFG.checkField] = 'Fixes approved';
-    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '') + (corrections.length ? ', ' + corrections.length + ' correction' + (corrections.length === 1 ? '' : 's') + ' to the AI reader' : '') + (stickies.length ? ', ' + stickies.length + ' note' + (stickies.length === 1 ? '' : 's') + ' for the designer' : '');
-    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : (forWatcher ? (stickies.length ? ' The notes are being written onto the layout in the background, within a minute.' : ' Nothing to apply: the notes and corrections are written into this section\'s knowledge in the background, within a minute.') : ' Nothing to apply, so the AI check field is unchanged.')), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
+    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '') + (corrections.length ? ', ' + corrections.length + ' correction' + (corrections.length === 1 ? '' : 's') + ' to the AI reader' : '') + (stickies.length ? ', ' + stickies.length + (stickies.length === 1 ? ' sticky' : ' stickies') + ' on the layout' : '');
+    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : (forWatcher ? (stickies.length ? ' The stickies are being written onto the layout in the background, within a minute.' : ' Nothing to apply: the notes and corrections are written into this section\'s knowledge in the background, within a minute.') : ' Nothing to apply, so the AI check field is unchanged.')), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say(plainError(e), 'err'); });
   }
   // After Send: watch the layout's AI check field until the background pass has applied the fixes, then show what became of each.
   function waitForFixes(id, what) {
@@ -231,8 +249,8 @@
       }, tries ? 8000 : 4000);
     })();
   }
-  function requestCheck() { var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.obj.MetaData.BasicMetaData.ID, p).then(function () { say('AI check requested. The read runs in the background and takes about three minutes; the layout then shows “Checked” in the in-progress list. You do not need to open InDesign.', 'ok'); listInProgress(); }).catch(function (e) { say('Request failed: ' + e.message, 'err'); }); }
-  function checkTemplate() { if (!S.templateId) { say('This layout does not name its template.', 'warn'); return; } var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.templateId, p).then(function () { say('AI check set to “Requested” on template ' + S.templateId + ': it runs at the template\'s next check-in.', 'ok'); listInProgress(); }).catch(function (e) { say('Request on the template failed: ' + e.message, 'err'); }); }
+  function requestCheck() { var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.obj.MetaData.BasicMetaData.ID, p).then(function () { say('AI check requested. The read runs in the background and takes about three minutes; the layout then shows “Checked” in the in-progress list. You do not need to open InDesign.', 'ok'); listInProgress(); }).catch(function (e) { say(plainError(e), 'err'); }); }
+  function checkTemplate() { if (!S.templateId) { say('This layout does not name its template.', 'warn'); return; } var p = {}; p[CFG.checkField] = 'Requested'; setProps(S.templateId, p).then(function () { say('AI check set to “Requested” on template ' + S.templateId + ': it runs at the template\'s next check-in.', 'ok'); listInProgress(); }).catch(function (e) { say(plainError(e), 'err'); }); }
 
   ContentStationSdk.registerCustomApp({
     // `name` is the app's id in the URL and must not change; `title` is what people read in the Apps menu.
