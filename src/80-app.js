@@ -15,6 +15,9 @@
     '  <label class="dim">in progress <select id="aicheck-list"><option value="">(loading…)</option></select></label>' +
     '  <button class="btn" id="aicheck-request" disabled>Request a check</button>' +
     '  <button class="btn" id="aicheck-checktpl" disabled>Check the template</button>' +
+    // Studio's own per-object route — the one its "open in new tab" uses (Benn, 2026-10-02):
+    //   <studio>/app/#/ids/IDs=<objectId>. For when the person reading the findings is the one making the edits.
+    '  <button class="btn" id="aicheck-instudio" disabled>Show in Studio</button>' +
     '  <label class="btn" title="For development: show a report from a file on this Mac, without Studio">Report file… <input type="file" id="aicheck-file" accept="application/json" hidden></label>' +
     '  <span id="aicheck-msg0" class="appmsg"></span>' +
     '</div></div>';
@@ -173,6 +176,10 @@
     fitPage(); if (window.ResizeObserver && !S.ro) { S.ro = new ResizeObserver(function () { fitPage(); }); S.ro.observe(document.querySelector('.aicheck-app .viewer')); }
     renderWorkedTo(report.workedTo);
     $('aicheck-send').disabled = false;
+    var sis = $('aicheck-instudio');
+    if (sis) { sis.disabled = false; sis.title = 'Open this layout in Studio in a new tab — the same place its "open in new tab" goes. From there it can be opened in InDesign.';
+      sis.onclick = function () { var id = S.obj && S.obj.MetaData.BasicMetaData.ID; if (!id) return;
+        window.open(window.location.origin + '/app/#/ids/IDs=' + encodeURIComponent(id), '_blank'); }; }
     if (S.waitMsg) say(S.waitMsg, 'warn'); else say('Loaded. Choose an action on each finding, decide the labels, then Send.', 'ok');
   }
 
@@ -199,10 +206,13 @@
     // Fixes, house notes and corrections all need the background watcher: fixes to apply them, notes and corrections to write
     // them into the section's knowledge. With nothing to apply, the watcher records them and puts the field back to Checked
     // without making a new version (2026-09-22: a note sent on its own used to sit in the field and never reach the section).
-    var forWatcher = acts.length || houseNotes.length || corrections.length;
+    // Notes for the designer need the watcher too: it writes them onto the layout as sticky notes. Without them in
+    // this list a notes-only Send wrote the payload, left the field alone and nothing ever happened — it even said
+    // "nothing was sent" (Benn, 2026-10-02).
+    var forWatcher = acts.length || houseNotes.length || corrections.length || stickies.length;
     if (forWatcher) props[CFG.checkField] = 'Fixes approved';
-    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '') + (corrections.length ? ', ' + corrections.length + ' correction' + (corrections.length === 1 ? '' : 's') + ' to the AI reader' : '');
-    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : (forWatcher ? ' Nothing to apply: the notes and corrections are written into this section\'s knowledge in the background, within a minute.' : ' Nothing to apply, so the AI check field is unchanged.')), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
+    var n = acts.length, what = n + ' fix' + (n === 1 ? '' : 'es') + (rules.length ? ', ' + rules.length + ' always rule' + (rules.length === 1 ? '' : 's') : '') + (ign.length ? ', ' + ign.length + ' ignored' : '') + (todos.length ? ', ' + todos.length + ' template to-do' + (todos.length === 1 ? '' : 's') : '') + (houseNotes.length ? ', ' + houseNotes.length + ' house note' + (houseNotes.length === 1 ? '' : 's') : '') + (corrections.length ? ', ' + corrections.length + ' correction' + (corrections.length === 1 ? '' : 's') + ' to the AI reader' : '') + (stickies.length ? ', ' + stickies.length + ' note' + (stickies.length === 1 ? '' : 's') + ' for the designer' : '');
+    say('Sending…'); setProps(S.obj.MetaData.BasicMetaData.ID, props).then(function () { say('Sent: ' + what + '.' + (n ? ' They are being applied in the background; this page will show the result.' : (forWatcher ? (stickies.length ? ' The notes are being written onto the layout in the background, within a minute.' : ' Nothing to apply: the notes and corrections are written into this section\'s knowledge in the background, within a minute.') : ' Nothing to apply, so the AI check field is unchanged.')), 'ok'); if (n) notify('AI Check: ' + n + ' fix' + (n === 1 ? '' : 'es') + ' approved: applying in the background', 'info'); listInProgress(); if (n) waitForFixes(S.obj.MetaData.BasicMetaData.ID, what); }).catch(function (e) { say('Send failed: ' + e.message, 'err'); });
   }
   // After Send: watch the layout's AI check field until the background pass has applied the fixes, then show what became of each.
   function waitForFixes(id, what) {
