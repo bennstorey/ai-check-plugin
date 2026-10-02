@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>AI Check — every card</title>
+<!--
+  THE STATES PAGE: every card the panel can draw, in the real plug-in, on one screen.
+
+      sh 04-scripts/studio-plugin/states.sh          # builds the plug-in and the invented report, then serves this
+
+  Why it exists: a design change used to be checked one card at a time — build, reload, screenshot, look, repeat —
+  and a card that had drifted (a different weight on the title, a colour on one button and not another) was only
+  found when it happened to be on screen. Here they all are at once, at any pane width, with the decided states
+  already decided (Benn, 2026-10-02).
+
+  Nothing here touches Studio and nothing here is a real layout: the report is invented words (build-states-report.py).
+-->
+<style>
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:#e9edf1;color:#0f172a}
+  .bar{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#0f172a;color:#fff;font-size:12px}
+  .bar b{font-weight:700}
+  .bar button{font:inherit;padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#fff;cursor:pointer}
+  .bar button.on{background:#f59e0b;border-color:#f59e0b;color:#111827;font-weight:700}
+  .bar .sp{flex:1 1 auto}
+  .pane{margin:0 auto;background:#fff;height:calc(100vh - 42px);max-width:100%;overflow:auto;box-shadow:0 0 0 1px #cbd5e1}
+  .log{position:fixed;right:0;bottom:0;width:min(420px,40vw);max-height:30vh;overflow:auto;background:#0f172a;color:#cbd5e1;font:11px/1.45 ui-monospace,Menlo,monospace;padding:8px 10px;z-index:60;border-top-left-radius:8px}
+  .log b{color:#fbbf24}
+  .log:empty{display:none}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>AI Check — every card</b>
+  <span>pane:</span>
+  <button data-w="wide">wide</button>
+  <button data-w="1100">1100</button>
+  <button data-w="899">899</button>
+  <button data-w="640">640</button>
+  <button data-w="420">420</button>
+  <span class="sp"></span>
+  <button id="open">open every fold and ⋯</button>
+  <button id="reseed">reset the decisions</button>
+  <button id="clearlog">clear log</button>
+</div>
+<div class="pane" id="pane"></div>
+<div class="log" id="log"></div>
+
+<script>
+(function () {
+  var log = document.getElementById('log');
+  function say(what, detail) {
+    var d = document.createElement('div');
+    d.innerHTML = '<b>' + what + '</b> ' + (detail ? String(detail).replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) : '');
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  document.getElementById('clearlog').onclick = function () { log.innerHTML = ''; };
+
+  window.csConfig = { serverUrl: '/server/index.php' };
+
+  // THE DECIDED STATES. The panel keeps a person's decisions under aicheck-<runId>, so seeding that key is how a card
+  // is shown already chosen — the same path a real decision takes, not a special case in the markup.
+  var SEED = {
+    decision: { 's-decided-fix': 'fixOnce', 's-decided-ign': 'ignoreAlways' },
+    labels: {}, labelText: {}, flags: { 's-master': true }, houseNotes: {}, corrections: {},
+    notes: { 's-decided-note': { frameId: 105, page: '1', text: 'The picture does not fill its frame — please re-crop or re-scale it.' } }
+  };
+  function seed() { try { localStorage.setItem('aicheck-states', JSON.stringify(SEED)); } catch (e) {} }
+  seed();
+  document.getElementById('reseed').onclick = function () { seed(); location.reload(); };
+
+  var FAKE = {
+    QueryObjects: function () { return { Columns: [{ Name: 'ID' }], Rows: [] }; },
+    GetUserProfile: function () { return { CurrentUser: { UserID: 'designer', FullName: 'A Designer', PublicUuid: '0' } }; },
+    GetStates: function () { return { States: [] }; },
+    ListVersions: function () { return { Versions: [] }; },
+    SetObjectProperties: function () { say('Send', 'nothing is written from the states page'); return {}; },
+    GetObjects: function () { return { Objects: [] }; }
+  };
+  var realFetch = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    var u = String(url);
+    if (u.indexOf('index.php') >= 0) {
+      var m = /method=([^&]+)/.exec(u), name = m ? decodeURIComponent(m[1]) : '?';
+      var body = {}; try { body = JSON.parse(opts.body).params[0]; } catch (e) {}
+      var fn = FAKE[name]; if (!fn) say('UNANSWERED Studio call', name);
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ result: fn ? fn(body) : {} }); } });
+    }
+    return realFetch(url, opts);
+  };
+
+  window.ContentStationSdk = {
+    getInfo: function () { return { Ticket: 'states', User: 'designer' }; },
+    showNotification: function (o) { say('notification', o && o.content); },
+    onSignin: function () {}, onSignout: function () {},
+    registerCustomApp: function (app) {
+      document.getElementById('pane').innerHTML = app.content;
+      say('plug-in registered', app.title || app.name);
+      setTimeout(function () { try { app.onInit && app.onInit(); } catch (e) { say('onInit failed', e.message); } }, 0);
+    }
+  };
+
+  // a plain page to draw the boxes on: the states page is about the cards, not about a real spread
+  var PAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="820" height="1020"><rect width="820" height="1020" fill="#fbfbfa"/>' +
+    '<text x="410" y="520" text-anchor="middle" font-family="Helvetica" font-size="26" fill="#cbd5e1">an invented page</text></svg>');
+
+  // ONE FINDING ALREADY APPLIED, so the "Fixed" line is on the page too. In Studio this comes from the layout's own
+  // C_AI_ACTIONS field; here it is handed straight to the panel.
+  var APPLIED = { appliedAt: '2026-10-02T09:12:00Z', results: [
+    { ok: true, op: 'ApplyParagraphStyle', frameId: 107, why: 'the caption carries the credit',
+      before: { paraStyle: 'TX Body Text' }, after: { paraStyle: 'PC Caption' } } ] };
+
+  window.__aiCheckDemo = { id: '0', name: 'Every card', version: '1.0', previews: { '1': PAGE },
+                           report: 'states-data/report.json', applied: APPLIED };
+
+  var pane = document.getElementById('pane');
+  function setW(w) {
+    pane.style.width = (w === 'wide' ? '100%' : w + 'px');
+    Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.classList.toggle('on', b.dataset.w === String(w)); });
+    try { localStorage.setItem('aicheck-states-w', String(w)); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.onclick = function () { setW(b.dataset.w); }; });
+  var savedW; try { savedW = localStorage.getItem('aicheck-states-w'); } catch (e) {}
+  setW(savedW || 'wide');
+
+  // every fold and every ⋯ at once: the state nobody ever sees until it is wrong
+  document.getElementById('open').onclick = function () {
+    document.querySelectorAll('.aicheck-app details').forEach(function (d) { d.open = true; });
+    Array.prototype.forEach.call(document.querySelectorAll('.aicheck-app .row .ib'), function (b) { if (!b.classList.contains('on')) b.click(); });
+    setTimeout(function () { document.querySelectorAll('.aicheck-app details').forEach(function (d) { d.open = true; }); }, 300);
+  };
+  window.addEventListener('error', function (e) { say('error', e.message); });
+})();
+</script>
+<script src="dist/ai-check-plugin.js"></script>
+</body>
+</html>

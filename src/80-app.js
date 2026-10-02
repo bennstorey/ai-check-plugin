@@ -176,6 +176,7 @@
     var live = S.obj.MetaData.WorkflowMetaData.State; if (live && live.Name) D.layout.status = live.Name;
     // what has already been applied to this layout: the list collapses those findings to one line each (Benn, 2026-09-28)
     try { D.applied = JSON.parse(extraOf(S.obj, CFG.actionsField) || 'null'); } catch (e2) { D.applied = null; }
+    if (window.__aiCheckDemo && window.__aiCheckDemo.applied) D.applied = window.__aiCheckDemo.applied;   // the states page: an applied fix without a Studio behind it
     if (window.__aiCheckShowWork) window.__aiCheckShowWork(true);
     fitHeight();
     $('title').textContent = (report.layout && report.layout.name || S.obj.MetaData.BasicMetaData.Name).replace(/\.indd$/, '');
