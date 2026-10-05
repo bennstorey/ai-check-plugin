@@ -127,6 +127,38 @@
     Array.prototype.forEach.call(document.querySelectorAll('.aicheck-app .row .ib'), function (b) { if (!b.classList.contains('on')) b.click(); });
     setTimeout(function () { document.querySelectorAll('.aicheck-app details').forEach(function (d) { d.open = true; }); }, 300);
   };
+  // A SCRIPTED AGENT, so the drawer and every ending can be looked at without a service, a key or a layout.
+  // Four conversations, picked by what the first line says — and "break" makes the service fail, because the state
+  // nobody sees until it is wrong is the one that is wrong.
+  var CANNED = {
+    note: [ { reply: 'Does that hold for every cut-out in this section, or only this one?', done: false },
+            { reply: 'Then I will write it into this section’s notes, pending, so the next read works to it.', done: true,
+              outcome: { route: 'houseNote', houseNote: { says: 'A cut-out of a standing figure is not cropped at the shin or the ankle: crop above the knee, or show the feet.' } } } ],
+    email: [ { reply: 'Nothing I have measures where a cut-out is cropped. Is it the crop itself, or that it was not flagged?', done: false },
+             { reply: 'Then this needs something I have not got. I have written it up.', done: true,
+               outcome: { route: 'email', email: { subject: 'AI Check missed a cropped cut-out — Observer news',
+                 body: 'On layout 0 v1.0 (Observer — main news sections), a cut-out of a standing figure is cropped at the shin.\n\nWhat I had: img.notFillingFrame measured 23% of the frame empty (top 19.11 pt, left 63 pt) and I dropped it.\nWhat I would need: a check that reads where a cut-out is cropped, not only how much frame is empty.\n\nRun ai-states, frame 104, page 1.' } } } ],
+    decide: [ { reply: 'That one is a judgement call rather than something I can measure. Shall I ask whoever decides it?', done: false },
+              { reply: 'I will ask them on this layout in Studio.', done: true,
+                outcome: { route: 'ask', ask: { question: 'Is a cut-out cropped at the knee right for this section, or should it always show the feet?' } } } ],
+    answer: [ { reply: 'Because the rule measured empty frame, not lost subject: 23% of the frame was empty at the top and left, which on its own reads like white space a designer chose. I dropped it. The frame was 1980956 on page 11.', done: true, outcome: { route: 'answered' } } ]
+  };
+  window.AICheckMiss = {
+    contract: 1,
+    health: function () { return Promise.resolve({ ok: true, contract: 1 }); },
+    turn: function (ctx, turns) {
+      var first = (turns[0] && turns[0].text || '').toLowerCase();
+      if (/break|fail|down/.test(first)) { say('ask', 'the service is pretending to be down'); return Promise.reject(new Error('the service did not answer')); }
+      var script = /why|what did|didn|look/.test(first) ? CANNED.answer
+                 : /always|never|section|we don/.test(first) ? CANNED.note
+                 : /decide|right or wrong|art director/.test(first) ? CANNED.decide
+                 : CANNED.email;
+      var i = Math.min(Math.floor(turns.filter(function (t) { return t.who === 'person'; }).length) - 1, script.length - 1);
+      say('ask', 'turn ' + turns.length + ' \u2192 ' + (script[i].done ? (script[i].outcome.route) : 'asking back'));
+      return new Promise(function (res) { setTimeout(function () { res(script[i]); }, 450); });
+    }
+  };
+
   window.addEventListener('error', function (e) { say('error', e.message); });
 })();
 </script>
