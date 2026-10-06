@@ -22,10 +22,13 @@
   .bar button{font:inherit;padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#fff;cursor:pointer}
   .bar button.on{background:#f59e0b;border-color:#f59e0b;color:#111827;font-weight:700}
   .bar .sp{flex:1 1 auto}
-  .pane{margin:0 auto;background:#fff;height:calc(100vh - 42px);max-width:100%;overflow:auto;box-shadow:0 0 0 1px #cbd5e1}
-  .log{position:fixed;right:0;bottom:0;width:min(420px,40vw);max-height:30vh;overflow:auto;background:#0f172a;color:#cbd5e1;font:11px/1.45 ui-monospace,Menlo,monospace;padding:8px 10px;z-index:60;border-top-left-radius:8px}
+  .pane{margin:0 auto;background:#fff;height:calc(100vh - 42px - 22px);max-width:100%;overflow:auto;box-shadow:0 0 0 1px #cbd5e1;position:relative}
+  .logwrap{position:fixed;left:0;right:0;bottom:0;z-index:60;font:11px/1.45 ui-monospace,Menlo,monospace}
+  .logbar{display:flex;gap:10px;align-items:center;padding:3px 10px;background:#0f172a;color:#64748b;cursor:pointer}
+  .logbar b{color:#fbbf24;font-weight:700}
+  .log{max-height:0;overflow:auto;background:#0f172a;color:#cbd5e1;padding:0 10px;transition:max-height .15s ease}
+  .logwrap.open .log{max-height:28vh;padding:6px 10px}
   .log b{color:#fbbf24}
-  .log:empty{display:none}
 </style>
 </head>
 <body>
@@ -43,7 +46,7 @@
   <button id="clearlog">clear log</button>
 </div>
 <div class="pane" id="pane"></div>
-<div class="log" id="log"></div>
+<div class="logwrap" id="logwrap"><div class="logbar" id="logbar"><b id="logn">0</b> <span>what the fake Studio was asked — click to open</span></div><div class="log" id="log"></div></div>
 
 <script>
 (function () {
@@ -52,8 +55,10 @@
     var d = document.createElement('div');
     d.innerHTML = '<b>' + what + '</b> ' + (detail ? String(detail).replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) : '');
     log.appendChild(d); log.scrollTop = log.scrollHeight;
+    var n = document.getElementById('logn'); if (n) n.textContent = log.children.length;
   }
-  document.getElementById('clearlog').onclick = function () { log.innerHTML = ''; };
+  document.getElementById('clearlog').onclick = function (ev) { ev.stopPropagation(); log.innerHTML = ''; document.getElementById('logn').textContent = '0'; };
+  document.getElementById('logbar').onclick = function () { document.getElementById('logwrap').classList.toggle('open'); };
 
   window.csConfig = { serverUrl: '/server/index.php' };
 

@@ -65,7 +65,9 @@ STUDIO_CSS = """
 .aicheck-app .wrap[hidden]{display:none}
 /* the app measures ITSELF, not the browser window: Studio's pane can be far narrower than the window, and a media
    query would never notice (Benn, 2026-10-02 — the columns stayed side by side and the findings ran off the edge) */
-.aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden;container-type:inline-size}
+.aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden;container-type:inline-size;position:relative}
+/* the dot and the drawer hang off the app's own box, so they cannot ride over Studio's chrome (2026-10-06) */
+.aicheck-app .aidot,.aicheck-app .aidrawer{position:absolute}
 .aicheck-app .apppanel{margin:0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex:0 0 auto;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}
 .aicheck-app [hidden]{display:none!important}
 /* the bar (Figma 2004:338): one row under the tabs, full width, always there */
