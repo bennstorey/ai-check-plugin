@@ -62,6 +62,8 @@
   // ── the lab's own shape, so the widths and the words are honest ────────────────────────────────────────────────
   var BRANDS = [{ Id: '22', Name: 'WW Development Sandbox' }, { Id: '1', Name: 'WW Demo' }];
   var STATES = ['layout', 'Design Check', 'Generate PDF', 'AI Check & Tidy', 'AI Check Done', 'AI Check – Needs Attention', 'AI Fix Approved'];
+  // C_AI_CHECK's real value list, read off the lab with GetCustomProperties on 2026-10-06.
+  var CHECKS = ['Not requested', 'Requested', 'Checked', 'Fixes approved', 'Fixes applied', 'Skip'];
   var LAYOUTS = [
     { ID: '93086', Name: 'BIZ1907opener',  State: 'Design Check', PageRange: '037',     LockedBy: '',           C_AI_CHECK: 'Checked' },
     { ID: '93084', Name: 'BIZ1907Segro',   State: 'Design Check', PageRange: '041',     LockedBy: '',           C_AI_CHECK: 'Checked' },
@@ -75,14 +77,28 @@
   var FAKE = {
     GetUserProfile: function () { return { CurrentUser: { UserID: 'benn.storey', FullName: 'Benn Storey', PublicUuid: 'faf5b030-5930-7762-50a5-fa1ec384cf58' } }; },
     GetPublications: function () { return { Publications: BRANDS }; },
-    GetStates: function (p) { say('GetStates', 'brand ' + p.PublicationId); return { States: STATES.map(function (n, i) { return { Id: String(600 + i), Name: n, Type: 'Layout' }; }) }; },
+    GetStates: function (p) { say('GetStates', 'brand ' + ((p.Publication && p.Publication.Id) || '?')); return { States: STATES.map(function (n, i) { return { Id: String(600 + i), Name: n, Type: 'Layout' }; }) }; },
+    GetCustomProperties: function () {
+      say('GetCustomProperties', 'C_AI_CHECK value list');
+      return { ObjectTypeProperties: [{ Type: '', Properties: [{ Name: 'C_AI_CHECK', Type: 'list', ValueList: [''].concat(CHECKS) }] }] };
+    },
     QueryObjects: function (p) {
       var want = {};
       (p.Params || []).forEach(function (q) { want[q.Property] = q.Value; });
       say('QueryObjects', JSON.stringify(want));
       var cols = p.MinimalProps || ['ID', 'Name'];
-      var rows = LAYOUTS.filter(function (l) { return (!want.State || l.State === want.State); })
-                        .map(function (l) { return cols.map(function (c) { return l[c] !== undefined ? l[c] : ''; }); });
+      // the live field wins over the seeded one, so a write made in this session shows up in the next lookup
+      function checkOf(l) { return (WROTE[l.ID] && WROTE[l.ID].C_AI_CHECK) || l.C_AI_CHECK || ''; }
+      var rows = LAYOUTS.filter(function (l) {
+                          return (!want.State || l.State === want.State) &&
+                                 (!want.C_AI_CHECK || checkOf(l) === want.C_AI_CHECK);
+                        })
+                        .map(function (l) {
+                          return cols.map(function (c) {
+                            if (c === 'C_AI_CHECK') return checkOf(l);
+                            return l[c] !== undefined ? l[c] : '';
+                          });
+                        });
       return { Columns: cols.map(function (c) { return { Name: c }; }), Rows: rows };
     },
     GetObjects: function (p) {

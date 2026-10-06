@@ -50,7 +50,8 @@
   function listHtml(b) {
     var take = b.rows.filter(function (r) { return !r.skip; });
     return '<div class="ask-card">' +
-      '<div class="ask-card-h"><b>' + b.rows.length + '</b> in ' + esc(b.status) + (b.brand ? ' · ' + esc(b.brand) : '') + '</div>' +
+      '<div class="ask-card-h"><b>' + b.rows.length + '</b> ' + (b.lookup ? 'at ' : 'in ') + esc(b.status) +
+        (b.brand ? ' · ' + esc(b.brand) : '') + '</div>' +
       '<ul class="ask-rows">' + b.rows.map(function (r) {
         return '<li class="ask-row' + (r.skip ? ' is-skip' : '') + '">' +
           '<span class="ask-rname">' + esc(r.name) + '</span>' +
@@ -61,10 +62,13 @@
           '</li>';
       }).join('') + '</ul>' +
       (b.capped ? '<p class="ask-note">That is the first ' + b.rows.length + '. There may be more — ask me again when these are through.</p>' : '') +
+      // A lookup is an answer, not a job: asking what is in Requested should not put a button in front of someone that
+      // requests it all again.
+      (b.lookup ? '' :
       '<div class="ask-card-f">' +
         '<button class="ask-cta">Check ' + take.length + (take.length === 1 ? ' layout' : ' layouts') + '</button>' +
         '<span class="ask-fnote">' + esc(b.cost) + '</span>' +
-      '</div>' +
+      '</div>') +
     '</div>';
   }
 
@@ -96,10 +100,13 @@
     '</div>';
   }
 
+  // A workflow status holds layouts; an AI-check value is a stage a layout is AT. Calling the check values "statuses"
+  // sends someone to the Management Console looking for something that was never there.
   function nothingHtml(b) {
     return '<div class="ask-card is-quiet">' +
-      '<div class="ask-card-h">' + esc(b.status) + ' is empty.</div>' +
-      '<p class="ask-note">Statuses I can see: ' + esc((b.known || []).join(' · ')) + '.</p>' +
+      '<div class="ask-card-h">' + (b.lookup ? 'Nothing is at ' + esc(b.status) + '.' : esc(b.status) + ' is empty.') + '</div>' +
+      '<p class="ask-note">' + (b.lookup ? 'The AI check goes: ' : 'Statuses I can see: ') +
+        esc((b.known || []).join(' · ')) + '.</p>' +
     '</div>';
   }
 

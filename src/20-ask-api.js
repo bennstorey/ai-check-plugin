@@ -73,6 +73,7 @@
         else if (kind === 'need') out = { route: 'email', email: r.email };
         else if (kind === 'decide') out = { route: 'ask', ask: r.ask };
         else if (kind === 'findByStatus') out = { route: 'findByStatus', status: r.status };
+        else if (kind === 'findByCheck') out = { route: 'findByCheck', check: r.check };
         return { reply: r && r.reply, done: !!(r && r.done), outcome: out, kind: kind, usage: r && r.usage };
       });
     }

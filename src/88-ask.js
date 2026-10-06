@@ -22,7 +22,8 @@
   if (!UI) return;                                        // the look lives in 86-ask-ui.js; without it there is nothing to draw
 
   var ROOT = 'askst';                                     // every id in here is namespaced: two apps, one bundle
-  var st = { turns: [], draft: '', busy: false, writing: false, brands: [], brand: null, statuses: [], recent: [], me: null };
+  var st = { turns: [], draft: '', busy: false, writing: false, brands: [], brand: null, statuses: [], checks: [],
+             recent: [], me: null };
 
   function $(id) { return document.getElementById(ROOT + '-' + id); }
   function recentKey() { return 'askst-recent'; }
@@ -59,9 +60,31 @@
       .then(function (r) { st.statuses = ((r && r.States) || []).map(function (s) { return s.Name; }); return st.statuses; })
       .catch(function (e) { st.statuses = []; st.statusError = String((e && e.message) || e); return st.statuses; });
   }
-  function layoutsIn(status) {
+  // The AI check's own values, read from Studio rather than remembered. C_AI_CHECK is a list property, so the server
+  // holds the only true list; on the lab today it is Not requested · Requested · Checked · Fixes approved ·
+  // Fixes applied · Skip. Hard-coding it would make the panel lie the first time a brand's list differed.
+  function checkValues() {
+    return callServer('GetCustomProperties', { __classname__: 'WflGetCustomPropertiesRequest' })
+      .then(function (r) {
+        var found = null;
+        ((r && r.ObjectTypeProperties) || []).forEach(function (g) {
+          ((g && g.Properties) || []).forEach(function (p) {
+            if (p && p.Name === 'C_AI_CHECK' && p.ValueList && p.ValueList.length) found = p.ValueList;
+          });
+        });
+        st.checks = (found || []).filter(function (v) { return v; });
+        return st.checks;
+      })
+      .catch(function () { st.checks = []; return st.checks; });   // not fatal: the status route still works
+  }
+
+  // One finder, two columns. `State` is the workflow status; `C_AI_CHECK` is how far the check itself has got. Both
+  // are exact-match only on this server, so the value is matched against a list read from Studio before it is used.
+  function layoutsIn(status) { return layoutsBy('State', status); }
+  function layoutsByCheck(value) { return layoutsBy('C_AI_CHECK', value); }
+  function layoutsBy(prop, value) {
     var p = [{ Property: 'Type', Operation: '=', Value: 'Layout', __classname__: 'QueryParam' },
-             { Property: 'State', Operation: '=', Value: status, __classname__: 'QueryParam' }];
+             { Property: prop, Operation: '=', Value: value, __classname__: 'QueryParam' }];
     if (st.brand) p.push({ Property: 'Publication', Operation: '=', Value: st.brand.name, __classname__: 'QueryParam' });
     return callServer('QueryObjects', { Params: p, MaxEntries: 25,
       MinimalProps: ['ID', 'Name', 'State', 'LockedBy', 'PageRange', 'Version', 'C_AI_CHECK'],
@@ -159,46 +182,61 @@
     var turn = { who: 'me', text: '', block: { kind: 'stages', stages: stages } };
     st.turns.push(turn);
 
-    var ctx = { brand: st.brand && st.brand.name, statuses: st.statuses, me: (st.me && st.me.name) || null };
+    var ctx = { brand: st.brand && st.brand.name, statuses: st.statuses, aiCheckValues: st.checks,
+                me: (st.me && st.me.name) || null };
     if (st.statusError) ctx.statusesCouldNotBeRead = st.statusError;   // never let it claim a brand has no statuses
     var convo = st.turns.filter(function (t) { return t.text; }).map(function (t) { return { who: t.who === 'person' ? 'person' : 'agent', text: t.text }; });
 
     return window.AICheckMiss.turn(ctx, convo, 'front').then(function (r) {
       stage(stages, 'read', 'done');
-      if (r.kind !== 'findByStatus' || !(r.outcome && r.outcome.status)) {
+      var byCheck = (r.kind === 'findByCheck' && r.outcome && r.outcome.check);
+      var byStatus = (r.kind === 'findByStatus' && r.outcome && r.outcome.status);
+      if (!byCheck && !byStatus) {
         stages.length = 0; turn.text = r.reply; st.busy = false; render(); return;
       }
-      var status = r.outcome.status;
+      // Two columns, one path. What differs is the list the value is checked against, the word used for it, and
+      // whether the answer ends in a button.
+      var lookup = !!byCheck;
+      var status = lookup ? r.outcome.check : r.outcome.status;
+      var known = (lookup ? st.checks : st.statuses).indexOf(status) >= 0;
+      var noun = lookup ? 'AI check' : 'status';
+      var seen = lookup ? st.checks : st.statuses;
       turn.text = r.reply;
       stage(stages, 'st', 'active');
-      var known = st.statuses.indexOf(status) >= 0;
-      stage(stages, 'st', known ? 'done' : 'warn', known ? status + ' is there' : 'no status called ' + status);
+      stage(stages, 'st', known ? 'done' : 'warn', known ? status + ' is there' : 'no ' + noun + ' called ' + status);
       if (!known) {
         stages.length = 0; st.busy = false;
-        say(st.statusError
+        say(st.statusError && !lookup
           ? 'I couldn’t read the statuses for ' + (st.brand ? st.brand.name : 'this brand') + ' — ' + st.statusError + '. That is my end, not yours.'
-          : 'There’s no status called “' + status + '” in ' + (st.brand ? st.brand.name : 'this brand') + '. The ones I can see: ' + st.statuses.join(' · ') + '.');
+          : (seen.length
+              ? 'There’s no ' + noun + ' called “' + status + '” in ' + (st.brand ? st.brand.name : 'this brand') + '. The ones I can see: ' + seen.join(' · ') + '.'
+              : 'I couldn’t read the ' + noun + ' list for ' + (st.brand ? st.brand.name : 'this brand') + '. That is my end, not yours.'));
         render(); return;
       }
       stage(stages, 'find', 'active');
-      return layoutsIn(status).then(function (rows) {
+      return (lookup ? layoutsByCheck(status) : layoutsIn(status)).then(function (rows) {
         stage(stages, 'find', 'done', rows.length + (rows.length === 1 ? ' layout' : ' layouts'));
         stage(stages, 'show', 'done');
         st.busy = false;
-        if (!rows.length) { say('', { kind: 'nothing', status: status, brand: st.brand && st.brand.name, known: st.statuses }); render(); return; }
+        if (!rows.length) { say('', { kind: 'nothing', status: status, brand: st.brand && st.brand.name, known: seen, lookup: lookup }); render(); return; }
         var take = rows.filter(function (r2) { return !r2.lockedBy; });
         var list = {
-          kind: 'list', status: status, brand: st.brand && st.brand.name, capped: rows.length >= 25,
+          kind: 'list', status: status, brand: st.brand && st.brand.name, capped: rows.length >= 25, lookup: lookup,
           rows: rows.map(function (r2) {
-            return { name: r2.name, pages: r2.pages ? 'p' + r2.pages : '', state: r2.state,
-                     skip: r2.lockedBy ? (r2.lockedBy + ' has it open — I can’t read a layout someone’s in.') : null };
+            // In a lookup the useful column is where the check has got to; in the status route it is the workflow.
+            return { name: r2.name, pages: r2.pages ? 'p' + r2.pages : '', state: lookup ? (r2.state || '') : r2.state,
+                     skip: (!lookup && r2.lockedBy) ? (r2.lockedBy + ' has it open — I can’t read a layout someone’s in.') : null };
           }),
           cost: 'About ' + Math.max(1, Math.round(take.length * 2.5)) + ' minutes. I’ll message you as each lands.',
           _take: take
         };
         var left = rows.length - take.length;
-        say(rows.length + ' in ' + status + '. I’ll do ' + take.length +
-            (left ? ' — ' + (left === 1 ? 'one is' : left + ' are') + ' open with someone else.' : '.'), list);
+        if (lookup) {
+          say(rows.length + (rows.length === 1 ? ' layout is' : ' layouts are') + ' at ' + status + '.', list);
+        } else {
+          say(rows.length + ' in ' + status + '. I’ll do ' + take.length +
+              (left ? ' — ' + (left === 1 ? 'one is' : left + ' are') + ' open with someone else.' : '.'), list);
+        }
         render();
       });
     }).catch(function (e) {
@@ -275,7 +313,9 @@
       }
       loadRecent();
       render();
-      loadMe().then(function (me) { st.me = me; return brands(); }).then(statuses).then(render).catch(function (e) {
+      loadMe().then(function (me) { st.me = me; return brands(); })
+        .then(function () { return Promise.all([statuses(), checkValues()]); })
+        .then(render).catch(function (e) {
         say('I can’t see your brands — ' + ((e && e.message) || e)); render();
       });
     }
