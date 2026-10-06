@@ -26,6 +26,9 @@
 
   function $(id) { return document.getElementById(ROOT + '-' + id); }
   function recentKey() { return 'askst-recent'; }
+  var BRAND_KEY = 'askst-brand';
+  function rememberBrand() { try { if (st.brand) localStorage.setItem(BRAND_KEY, st.brand.name); } catch (e) {} }
+  function lastBrand() { try { return localStorage.getItem(BRAND_KEY); } catch (e) { return null; } }
   function loadRecent() { try { st.recent = JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch (e) { st.recent = []; } }
   function keepRecent(q) {
     st.recent = [q].concat((st.recent || []).filter(function (x) { return x !== q; })).slice(0, 8);
@@ -36,7 +39,10 @@
   function brands() {
     return callServer('GetPublications', { __classname__: 'WflGetPublicationsRequest' }).then(function (r) {
       st.brands = ((r && r.Publications) || []).map(function (p) { return { id: p.Id, name: p.Name }; });
-      if (!st.brand && st.brands.length) st.brand = st.brands[0];
+      if (!st.brand && st.brands.length) {
+        var want = lastBrand();
+        st.brand = (want && st.brands.filter(function (b) { return b.name === want; })[0]) || st.brands[0];
+      }
       return st.brands;
     });
   }
@@ -104,6 +110,7 @@
     var turn = { who: 'me', text: 'On it.', block: run };
     st.turns.push(turn); st.writing = true; render();
 
+    rememberBrand();
     var chain = Promise.resolve(), done = 0, failed = 0;
     rows.forEach(function (row, i) {
       chain = chain.then(function () {
@@ -226,6 +233,7 @@
     var brand = host.querySelector('.ask-brand');
     if (brand) brand.onchange = function () {
       st.brand = st.brands.filter(function (b) { return b.name === brand.value; })[0] || st.brand;
+      rememberBrand();
       statuses().then(render);
     };
     var rec = host.querySelector('.ask-recentsel');
