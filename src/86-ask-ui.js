@@ -139,6 +139,7 @@
       '<span class="ask-av is-big">' + MARK + '</span>' +
       '<h2>What can I help you to do?</h2>' +
       '<p class="ask-lede">Tell me what you are trying to get done.</p>' +
+      ((st.brands && st.brands.length) ? '<p class="ask-in"><span>I’m working in:</span>' + brandHtml(st) + '</p>' : '') +
       composerHtml(st, true) +
       recentHtml(st) +
     '</div>';
@@ -157,7 +158,7 @@
     return '<div class="ask-composer' + (big ? ' is-big' : '') + '">' +
       '<div class="ask-field">' +
         '<textarea class="ask-input" rows="' + (big ? 2 : 1) + '" placeholder="' + (big ? 'I’m running late and I’ve another spread to build…' : 'Say a bit more') + '"' + (st.busy ? ' disabled' : '') + '>' + esc(st.draft || '') + '</textarea>' +
-        brandHtml(st) +
+        (big ? '' : brandHtml(st)) +
       '</div>' +
       '<button class="ask-send"' + (st.busy ? ' disabled' : '') + '>' + (st.busy ? 'Thinking…' : 'Ask') + '</button>' +
     '</div>';
@@ -284,6 +285,7 @@
     '.ask-send:disabled{opacity:.5;cursor:default}',
 
     // asked before, the brand, and the way out
+    '.ask-in{display:flex;gap:7px;align-items:center;justify-content:center;margin:0 0 10px;font-size:12.5px;color:var(--ink-3)}',
     '.ask-recent{margin-top:12px}',
     '.ask-recentsel{font:inherit;font-size:12.5px;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}',
     '.ask-field{flex:1 1 auto;min-width:0;position:relative;display:flex;flex-direction:column}',
