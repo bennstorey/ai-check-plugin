@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Ask Studio — every state</title>
+<!--
+  THE DESIGN BOARD. Every state the Ask surface can be in, side by side, at a chosen pane width, with no Studio, no
+  service, no key and no layout. Mark it up and it gets fixed in one round (Benn, 2026-10-05: "the design is not good
+  enough yet, let's do that first").
+
+      sh 04-scripts/studio-plugin/ask-states.sh        # serves this at http://localhost:8800/ask-states.html
+
+  Nothing here is wired. The words are invented; the layout names are the lab's own fixtures so the widths are honest.
+-->
+<style>
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:#e9edf1;color:#0f172a}
+  .bar{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#0f172a;color:#fff;font-size:12px}
+  .bar b{font-weight:700}
+  .bar button{font:inherit;padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#fff;cursor:pointer}
+  .bar button.on{background:#f59e0b;border-color:#f59e0b;color:#111827;font-weight:700}
+  .board{display:flex;flex-wrap:wrap;gap:22px;padding:22px;align-items:flex-start}
+  .case{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(15,23,42,.12);overflow:hidden}
+  .case h3{margin:0;padding:8px 12px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+  .case .frame{height:560px;overflow:hidden;border-top:0}
+  .case .ask{height:100%}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Ask Studio — every state</b>
+  <span>pane:</span>
+  <button data-w="860">860 — full screen</button>
+  <button data-w="640">640</button>
+  <button data-w="420">420 — narrow</button>
+  <span style="flex:1"></span>
+  <button id="replay">replay the clocks</button>
+</div>
+<div class="board" id="board"></div>
+
+<script src="src/86-ask-ui.js"></script>
+<script>
+(function () {
+  var S = document.createElement('style'); S.textContent = window.AskUI.CSS; document.head.appendChild(S);
+  var now = Date.now();
+
+  // the lab's own layouts, so the names are the real lengths
+  var FOUND = [
+    { name: 'BIZ1907opener',   pages: 'p37',      state: 'Design Check' },
+    { name: 'BIZ1907Segro',    pages: 'p41',      state: 'Design Check' },
+    { name: 'FOR1907maltby',   pages: 'p28',      state: 'Design Check', skip: 'Sam has it open in InDesign — I cannot read a layout somebody is working in. I will leave it.' },
+    { name: 'WLD1907latvia',   pages: 'p24–25',   state: 'Design Check' }
+  ];
+
+  var ASK = 'I’m running late and I have another spread to build — can you do a final check on anything in Design Check?';
+
+  var CASES = [
+    ['the front door', { turns: [], examples: ['Check anything in Design Check', 'What is waiting for me?'] }],
+
+    ['working it out', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'Let me look.', block: { kind: 'stages', stages: [
+        { key: 'read', label: 'Reading what you asked for', state: 'done', t0: now - 4200, t1: now - 2600 },
+        { key: 'st',   label: 'Checking the statuses in WW Development Sandbox', state: 'done', detail: 'Design Check is there', t0: now - 2600, t1: now - 1400 },
+        { key: 'find', label: 'Finding the layouts in it', state: 'active', t0: now - 1400 },
+        { key: 'ask',  label: 'Showing you before anything moves', state: 'pending' } ] } }
+    ] }],
+
+    ['what I found', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'Four layouts are in Design Check. I will ask for a check on three — Sam has the fourth open, and I cannot read a layout somebody is working in.',
+        block: { kind: 'list', status: 'Design Check', brand: 'WW Development Sandbox', rows: FOUND,
+                 cost: 'About ten minutes for three. I will tell you as each one lands.' } }
+    ] }],
+
+    ['doing it', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'Asking for them now.', block: { kind: 'run', t0: now - 9000, rows: [
+        { name: 'BIZ1907opener', state: 'done',    detail: 'asked for', t0: now - 9000, t1: now - 7200 },
+        { name: 'BIZ1907Segro',  state: 'active',  detail: 'writing',   t0: now - 7200 },
+        { name: 'WLD1907latvia', state: 'pending', detail: '' } ] } }
+    ] }],
+
+    ['done', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'Asking for them now.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 3000, rows: [
+        { name: 'BIZ1907opener', state: 'done', detail: 'asked for', t0: now - 21000, t1: now - 19000 },
+        { name: 'BIZ1907Segro',  state: 'done', detail: 'asked for', t0: now - 19000, t1: now - 17000 },
+        { name: 'WLD1907latvia', state: 'done', detail: 'asked for', t0: now - 17000, t1: now - 15000 } ],
+        after: 'They are in the queue. I read one at a time — about ten minutes for three — and I will say so on each layout as it is done, so it turns up in your messages. Sam still has FOR1907maltby.' } }
+    ] }],
+
+    ['one did not take', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'Asking for them now.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 2000, rows: [
+        { name: 'BIZ1907opener', state: 'done',   detail: 'asked for', t0: now - 21000, t1: now - 19000 },
+        { name: 'BIZ1907Segro',  state: 'failed', detail: 'refused: checked out while I was writing', t0: now - 19000, t1: now - 18000 },
+        { name: 'WLD1907latvia', state: 'done',   detail: 'asked for', t0: now - 18000, t1: now - 16000 } ],
+        after: 'Two are in the queue. BIZ1907Segro was taken while I was writing to it — ask me again when it is free and I will pick it up.' } }
+    ] }],
+
+    ['nothing there', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: '', block: { kind: 'nothing', status: 'Design Check', brand: 'WW Development Sandbox',
+        known: ['layout', 'Design Check', 'AI Check & Tidy', 'AI Check Done', 'AI Check – Needs Attention', 'AI Fix Approved', 'Generate PDF'] } }
+    ] }],
+
+    ['I cannot think', { turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: '', block: { kind: 'down', why: 'I could not reach the part of me that works out what you mean.' } }
+    ] }],
+
+    ['mid-conversation', { draft: 'only the news pages', turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'Four layouts are in Design Check. I will ask for a check on three — Sam has the fourth open.',
+        block: { kind: 'list', status: 'Design Check', brand: 'WW Development Sandbox', rows: FOUND, cost: 'About ten minutes for three.' } },
+      { who: 'person', text: 'just the ones on news pages' },
+      { who: 'me', text: 'Two of them are news: BIZ1907opener and BIZ1907Segro. Shall I do those two?', block: null }
+    ] }],
+
+    ['thinking', { busy: true, turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: '', block: { kind: 'stages', stages: [
+        { key: 'read', label: 'Reading what you asked for', state: 'active', t0: now - 900 } ] } }
+    ] }]
+  ];
+
+  var board = document.getElementById('board');
+  function draw(w) {
+    board.innerHTML = '';
+    CASES.forEach(function (c) {
+      var d = document.createElement('div'); d.className = 'case'; d.style.width = w + 'px';
+      d.innerHTML = '<h3>' + c[0] + '</h3><div class="frame"><div class="ask">' + window.AskUI.appHtml(c[1]) + '</div></div>';
+      board.appendChild(d);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.classList.toggle('on', b.dataset.w === String(w)); });
+    try { localStorage.setItem('ask-states-w', String(w)); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.onclick = function () { draw(+b.dataset.w); }; });
+  document.getElementById('replay').onclick = function () { draw(+(localStorage.getItem('ask-states-w') || 860)); };
+  var saved; try { saved = localStorage.getItem('ask-states-w'); } catch (e) {}
+  draw(+(saved || 860));
+
+  // the one ticker: clocks move without anything re-rendering
+  setInterval(function () {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-since]'), function (el) {
+      el.textContent = window.AskUI.mmss(Date.now() - (+el.dataset.since));
+    });
+  }, 1000);
+})();
+</script>
+</body>
+</html>
