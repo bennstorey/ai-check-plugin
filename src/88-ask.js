@@ -238,6 +238,13 @@
     };
     var rec = host.querySelector('.ask-recentsel');
     if (rec) rec.onchange = function () { if (rec.value === '') return; st.draft = st.recent[+rec.value]; render(); };
+    var neu = host.querySelector('#ask-new');
+    if (neu) neu.onclick = function () {
+      if (st.writing) return;                              // never mid-write: those seconds are ours to finish
+      st.turns = []; st.draft = ''; st.busy = false; render();
+    };
+    var x = host.querySelector('#ask-close');
+    if (x) x.onclick = function () { if (!st.writing) { st.turns = []; st.draft = ''; st.busy = false; render(); } };
     var cta = host.querySelector('.ask-cta');
     if (cta) cta.onclick = function () {
       var list = null;

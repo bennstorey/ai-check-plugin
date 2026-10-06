@@ -180,8 +180,10 @@
       // is how you leave entirely; this is how you drop a conversation you no longer need.
       '<div class="ask-top' + (st.writing ? ' is-writing' : '') + '">' +
         '<span class="ask-top-t">' + (st.writing ? 'Writing to Studio — a few seconds. Don’t close this.' : esc(st.brand || '')) + '</span>' +
-        '<button class="ask-ib" id="ask-new" title="Start again"' + (st.writing ? ' disabled' : '') + '>New</button>' +
-        '<button class="ask-ib" id="ask-close" title="Put this away"' + (st.writing ? ' disabled' : '') + '>✕</button></div>' +
+        '<button class="ask-ib" id="ask-new" title="Start again — this conversation is dropped"' + (st.writing ? ' disabled' : '') + '>New</button>' +
+        // A ✕ only where there is something to close. Full screen, Studio's own back arrow is how you leave, and two
+        // buttons that do the same thing is clutter (2026-10-06).
+        (st.canClose ? '<button class="ask-ib" id="ask-close" title="Put this away"' + (st.writing ? ' disabled' : '') + '>✕</button>' : '') + '</div>' +
       '<div class="ask-log">' + st.turns.map(turnHtml).join('') + '</div>' +
       '<div class="ask-foot">' + composerHtml(st, false) +
         '<p class="ask-foot-note">Nothing changes in Studio until you say so.</p>' +
