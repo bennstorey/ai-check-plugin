@@ -12,6 +12,9 @@
 
   Nothing here is wired. The words are invented; the layout names are the lab's own fixtures so the widths are honest.
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:#e9edf1;color:#0f172a}
   .bar{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#0f172a;color:#fff;font-size:12px}
@@ -67,80 +70,85 @@
   var FOUND = [
     { name: 'BIZ1907opener',   pages: 'p37',      state: 'Design Check' },
     { name: 'BIZ1907Segro',    pages: 'p41',      state: 'Design Check' },
-    { name: 'FOR1907maltby',   pages: 'p28',      state: 'Design Check', skip: 'Sam has it open in InDesign — I cannot read a layout somebody is working in. I will leave it.' },
+    { name: 'FOR1907maltby',   pages: 'p28',      state: 'Design Check', queue: true, skip: 'Sam has it open — I can’t read a layout someone’s in.' },
     { name: 'WLD1907latvia',   pages: 'p24–25',   state: 'Design Check' }
   ];
+
+  var BRANDS = ['WW Development Sandbox', 'The Observer', 'WW Demo'];
 
   var ASK = 'I’m running late and I have another spread to build — can you do a final check on anything in Design Check?';
 
   var CASES = [
-    ['the front door', { turns: [], examples: ['Check anything in Design Check', 'What is waiting for me?'] }],
+    ['the front door', { turns: [], brands: BRANDS, brand: BRANDS[0],
+      recent: ['Check anything in Design Check', 'Check the news pages before 6', 'What’s waiting for me?'] }],
 
-    ['working it out', { turns: [
+    ['the front door, first time', { turns: [], brands: BRANDS, brand: BRANDS[0] }],
+
+    ['working it out', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: 'Let me look.', block: { kind: 'stages', stages: [
-        { key: 'read', label: 'Reading what you asked for', state: 'done', t0: now - 4200, t1: now - 2600 },
-        { key: 'st',   label: 'Checking the statuses in WW Development Sandbox', state: 'done', detail: 'Design Check is there', t0: now - 2600, t1: now - 1400 },
-        { key: 'find', label: 'Finding the layouts in it', state: 'active', t0: now - 1400 },
-        { key: 'ask',  label: 'Showing you before anything moves', state: 'pending' } ] } }
+      { who: 'me', text: 'Looking.', block: { kind: 'stages', stages: [
+        { key: 'read', label: 'Reading what you asked', state: 'done', t0: now - 4200, t1: now - 2600 },
+        { key: 'st',   label: 'Checking the statuses', state: 'done', detail: 'Design Check is there', t0: now - 2600, t1: now - 1400 },
+        { key: 'find', label: 'Finding what’s in it', state: 'active', t0: now - 1400 },
+        { key: 'show', label: 'Showing you before anything moves', state: 'pending' } ] } }
     ] }],
 
-    ['what I found', { turns: [
+    ['what I found', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: 'Four layouts are in Design Check. I will ask for a check on three — Sam has the fourth open, and I cannot read a layout somebody is working in.',
+      { who: 'me', text: 'Four are in Design Check. I’ll do three — Sam has the fourth open.',
         block: { kind: 'list', status: 'Design Check', brand: 'WW Development Sandbox', rows: FOUND,
-                 cost: 'About ten minutes for three. I will tell you as each one lands.' } }
+                 cost: 'About ten minutes. I’ll message you as each lands.' } }
     ] }],
 
-    ['doing it', { turns: [
+    ['doing it', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: 'Asking for them now.', block: { kind: 'run', t0: now - 9000, rows: [
+      { who: 'me', text: 'On it.', block: { kind: 'run', t0: now - 9000, rows: [
         { name: 'BIZ1907opener', state: 'done',    detail: 'asked for', t0: now - 9000, t1: now - 7200 },
         { name: 'BIZ1907Segro',  state: 'active',  detail: 'writing',   t0: now - 7200 },
         { name: 'WLD1907latvia', state: 'pending', detail: '' } ] } }
     ] }],
 
-    ['done', { turns: [
+    ['done', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: 'Asking for them now.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 3000, rows: [
+      { who: 'me', text: 'On it.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 3000, rows: [
         { name: 'BIZ1907opener', state: 'done', detail: 'asked for', t0: now - 21000, t1: now - 19000 },
         { name: 'BIZ1907Segro',  state: 'done', detail: 'asked for', t0: now - 19000, t1: now - 17000 },
         { name: 'WLD1907latvia', state: 'done', detail: 'asked for', t0: now - 17000, t1: now - 15000 } ],
-        after: 'They are in the queue. I read one at a time — about ten minutes for three — and I will say so on each layout as it is done, so it turns up in your messages. Sam still has FOR1907maltby.' } }
+        after: 'In the queue. Get on with your spread — I’ll message you on each one. Sam still has FOR1907maltby.' } }
     ] }],
 
-    ['one did not take', { turns: [
+    ['one did not take', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: 'Asking for them now.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 2000, rows: [
+      { who: 'me', text: 'On it.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 2000, rows: [
         { name: 'BIZ1907opener', state: 'done',   detail: 'asked for', t0: now - 21000, t1: now - 19000 },
         { name: 'BIZ1907Segro',  state: 'failed', detail: 'refused: checked out while I was writing', t0: now - 19000, t1: now - 18000 },
         { name: 'WLD1907latvia', state: 'done',   detail: 'asked for', t0: now - 18000, t1: now - 16000 } ],
-        after: 'Two are in the queue. BIZ1907Segro was taken while I was writing to it — ask me again when it is free and I will pick it up.' } }
+        after: 'Two are in the queue. BIZ1907Segro was taken while I was writing — say the word when it’s free.' } }
     ] }],
 
-    ['nothing there', { turns: [
+    ['nothing there', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
       { who: 'me', text: '', block: { kind: 'nothing', status: 'Design Check', brand: 'WW Development Sandbox',
         known: ['layout', 'Design Check', 'AI Check & Tidy', 'AI Check Done', 'AI Check – Needs Attention', 'AI Fix Approved', 'Generate PDF'] } }
     ] }],
 
-    ['I cannot think', { turns: [
+    ['I cannot think', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: '', block: { kind: 'down', why: 'I could not reach the part of me that works out what you mean.' } }
+      { who: 'me', text: '', block: { kind: 'down' } }
     ] }],
 
-    ['mid-conversation', { draft: 'only the news pages', turns: [
+    ['mid-conversation', { brands: BRANDS, brand: BRANDS[0], draft: 'only the news pages', turns: [
       { who: 'person', text: ASK },
-      { who: 'me', text: 'Four layouts are in Design Check. I will ask for a check on three — Sam has the fourth open.',
-        block: { kind: 'list', status: 'Design Check', brand: 'WW Development Sandbox', rows: FOUND, cost: 'About ten minutes for three.' } },
+      { who: 'me', text: 'Four are in Design Check. I’ll do three — Sam has the fourth open.',
+        block: { kind: 'list', status: 'Design Check', brand: 'WW Development Sandbox', rows: FOUND, cost: 'About ten minutes.' } },
       { who: 'person', text: 'just the ones on news pages' },
-      { who: 'me', text: 'Two of them are news: BIZ1907opener and BIZ1907Segro. Shall I do those two?', block: null }
+      { who: 'me', text: 'Two are news — BIZ1907opener and BIZ1907Segro. Do those?', block: null }
     ] }],
 
-    ['thinking', { busy: true, turns: [
+    ['thinking', { brands: BRANDS, brand: BRANDS[0], busy: true, turns: [
       { who: 'person', text: ASK },
       { who: 'me', text: '', block: { kind: 'stages', stages: [
-        { key: 'read', label: 'Reading what you asked for', state: 'active', t0: now - 900 } ] } }
+        { key: 'read', label: 'Reading what you asked', state: 'active', t0: now - 900 } ] } }
     ] }]
   ];
 

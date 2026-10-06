@@ -56,7 +56,8 @@
           '<span class="ask-rname">' + esc(r.name) + '</span>' +
           (r.pages ? '<span class="ask-rpg">' + esc(r.pages) + '</span>' : '') +
           '<span class="ask-rstate">' + esc(r.state) + '</span>' +
-          (r.skip ? '<span class="ask-rskip">' + esc(r.skip) + '</span>' : '') +
+          (r.skip ? '<span class="ask-rskip">' + esc(r.skip) +
+            (r.queue ? ' <button class="ask-link">Queue it</button>' : '') + '</span>' : '') +
           '</li>';
       }).join('') + '</ul>' +
       (b.capped ? '<p class="ask-note">That is the first ' + b.rows.length + '. There may be more — ask me again when these are through.</p>' : '') +
@@ -96,17 +97,17 @@
 
   function nothingHtml(b) {
     return '<div class="ask-card is-quiet">' +
-      '<div class="ask-card-h">Nothing in ' + esc(b.status) + '</div>' +
-      '<p class="ask-note">I looked for the status by that name in ' + esc(b.brand) + ' and found it, so the column is simply empty. ' +
-      'The statuses I can see are: ' + esc((b.known || []).join(' · ')) + '.</p>' +
+      '<div class="ask-card-h">' + esc(b.status) + ' is empty.</div>' +
+      '<p class="ask-note">Statuses I can see: ' + esc((b.known || []).join(' · ')) + '.</p>' +
     '</div>';
   }
 
   function downHtml(b) {
     return '<div class="ask-card is-down">' +
-      '<div class="ask-card-h">I cannot think just now</div>' +
-      '<p class="ask-note">' + esc(b.why || 'The part of me that works out what you mean did not answer.') +
-      ' Studio is untouched. You can still open AI layout check and ask for a check there.</p>' +
+      '<div class="ask-card-h">I can’t check right now</div>' +
+      '<p class="ask-note">The tools I need to understand what you need are offline. Studio is untouched.</p>' +
+      '<div class="ask-card-f"><button class="ask-small">Tell support</button>' +
+        '<span class="ask-fnote">Sends them what happened.</span></div>' +
     '</div>';
   }
 
@@ -135,24 +136,49 @@
   function welcomeHtml(st) {
     return '<div class="ask-welcome">' +
       '<span class="ask-av is-big">' + MARK + '</span>' +
-      '<h2>What do you need?</h2>' +
-      '<p class="ask-lede">I can look over layouts before they go — tell me what you are trying to get done.</p>' +
+      '<h2>What can I help you to do?</h2>' +
+      '<p class="ask-lede">Tell me what you are trying to get done.</p>' +
       composerHtml(st, true) +
-      ((st.examples && st.examples.length) ? '<div class="ask-eg">' + st.examples.map(function (e) {
-        return '<button class="ask-egbtn">' + esc(e) + '</button>'; }).join('') + '</div>' : '') +
+      recentHtml(st) +
     '</div>';
+  }
+
+  // Asked before — a dropdown, not a row of buttons (Benn, 2026-10-06). Nothing is shown until there is a history.
+  function recentHtml(st) {
+    var r = st.recent || [];
+    if (!r.length) return '';
+    return '<div class="ask-recent"><select class="ask-recentsel"><option value="">Asked before…</option>' +
+      r.map(function (q, i) { return '<option value="' + i + '">' + esc(q) + '</option>'; }).join('') +
+      '</select></div>';
   }
 
   function composerHtml(st, big) {
     return '<div class="ask-composer' + (big ? ' is-big' : '') + '">' +
-      '<textarea class="ask-input" rows="' + (big ? 2 : 1) + '" placeholder="' + (big ? 'I’m running late and I have another spread to build…' : 'Say a bit more') + '"' + (st.busy ? ' disabled' : '') + '>' + esc(st.draft || '') + '</textarea>' +
+      '<div class="ask-field">' +
+        '<textarea class="ask-input" rows="' + (big ? 2 : 1) + '" placeholder="' + (big ? 'I’m running late and I’ve another spread to build…' : 'Say a bit more') + '"' + (st.busy ? ' disabled' : '') + '>' + esc(st.draft || '') + '</textarea>' +
+        brandHtml(st) +
+      '</div>' +
       '<button class="ask-send"' + (st.busy ? ' disabled' : '') + '>' + (st.busy ? 'Thinking…' : 'Ask') + '</button>' +
     '</div>';
+  }
+
+  // WHICH BRAND IS A CHOICE, NOT AN ASSUMPTION (Benn, 2026-10-06). It sits in the box the way the Re-use plug-in puts
+  // the archive there: a real <select>, so the keyboard and the option list are the browser's own.
+  function brandHtml(st) {
+    var bs = st.brands || [];
+    if (!bs.length) return '';
+    return '<select class="ask-brand" aria-label="Which brand">' + bs.map(function (b) {
+      return '<option' + (b === st.brand ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>';
   }
 
   function appHtml(st) {
     if (!st.turns || !st.turns.length) return '<div class="ask-app is-welcome">' + welcomeHtml(st) + '</div>';
     return '<div class="ask-app">' +
+      // Start again, and get this out of the way, without leaving the app (Benn, 2026-10-06). Studio's own Apps menu
+      // is how you leave entirely; this is how you drop a conversation you no longer need.
+      '<div class="ask-top"><span class="ask-top-t">' + esc(st.brand || '') + '</span>' +
+        '<button class="ask-ib" id="ask-new" title="Start again">New</button>' +
+        '<button class="ask-ib" id="ask-close" title="Put this away">✕</button></div>' +
       '<div class="ask-log">' + st.turns.map(turnHtml).join('') + '</div>' +
       '<div class="ask-foot">' + composerHtml(st, false) +
         '<p class="ask-foot-note">Nothing changes in Studio until you say so.</p>' +
@@ -166,7 +192,11 @@
   var CSS = [
     '.ask{--ai:#6B03FC;--ground:#f8fafc;--paper:#fff;--ink:#0f172a;--ink-2:#374151;--ink-3:#6b7280;--ink-4:#94a3b8;',
     '  --line:#e2e8f0;--line-2:#f1f5f9;--accent:#f59e0b;--accent-ink:#111827;--ok:#15803d;--bad:#c80909;--warn:#c86b00;',
-    '  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);',
+    // Studio's own theme fonts (Benn, 2026-10-06): Mulish for reading, Raleway for headings. Named first and the
+    // system stack behind them, so the surface still reads properly wherever the webfonts have not loaded.
+    '  --font-b:Mulish,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;',
+    '  --font-h:Raleway,var(--font-b);',
+    '  font:14px/1.5 var(--font-b);color:var(--ink);',
     '  container-type:inline-size;height:100%;display:flex;flex-direction:column;background:var(--ground)}',
     '.ask *{box-sizing:border-box}',
     '.ask-app{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}',
@@ -174,7 +204,7 @@
 
     // the front door
     '.ask-welcome{width:min(620px,100%);text-align:center}',
-    '.ask-welcome h2{margin:14px 0 4px;font-size:24px;font-weight:800;letter-spacing:-.01em}',
+    '.ask-welcome h2{margin:14px 0 4px;font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-.01em}',
     '.ask-lede{margin:0 0 18px;color:var(--ink-3);font-size:14px}',
     '.ask-eg{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}',
     '.ask-egbtn{font:inherit;font-size:12.5px;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}',
@@ -213,13 +243,13 @@
     '.ask-card{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}',
     '.ask-card.is-quiet{background:transparent}',
     '.ask-card.is-down{border-color:#fdd;background:#fff8f8}',
-    '.ask-card-h{display:flex;gap:8px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--line-2);font-size:13px;color:var(--ink-2)}',
+    '.ask-card-h{display:flex;gap:8px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--line-2);font-family:var(--font-h);font-size:13px;font-weight:600;color:var(--ink-2)}',
     '.ask-card-h b{font-weight:700;color:var(--ink)}',
     '.ask-rows{list-style:none;margin:0;padding:0}',
     '.ask-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:baseline;padding:8px 14px;border-top:1px solid var(--line-2);font-size:13px}',
     '.ask-row:first-child{border-top:0}',
     '.ask-row.is-skip{color:var(--ink-4)}',
-    '.ask-rname{font-weight:600;overflow-wrap:anywhere}',
+    '.ask-rname{font-family:var(--font-h);font-weight:600;overflow-wrap:anywhere}',
     '.ask-row.is-skip .ask-rname{font-weight:500}',
     '.ask-rpg{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}',
     '.ask-rstate{font-size:11.5px;color:var(--ink-3);text-align:right}',
@@ -251,6 +281,17 @@
     '.ask-composer.is-big .ask-send{margin-top:10px;padding:10px 22px;font-size:14px}',
     '.ask-send:disabled{opacity:.5;cursor:default}',
 
+    // asked before, the brand, and the way out
+    '.ask-recent{margin-top:12px}',
+    '.ask-recentsel{font:inherit;font-size:12.5px;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}',
+    '.ask-field{flex:1 1 auto;min-width:0;position:relative;display:flex;flex-direction:column}',
+    '.ask-brand{align-self:flex-start;margin:6px 0 0;font:inherit;font-size:11.5px;color:var(--ink-3);background:var(--ground);border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer;field-sizing:content}',
+    '.ask-top{flex:0 0 auto;display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--paper)}',
+    '.ask-top-t{flex:1 1 auto;min-width:0;font-size:12px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.ask-ib{font:inherit;font-size:12px;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer}',
+    '.ask-ib:hover{border-color:var(--ink-3)}',
+    '.ask-link{font:inherit;font-size:11.5px;color:var(--ink-2);background:none;border:0;border-bottom:1px solid var(--line);padding:0;cursor:pointer}',
+    '.ask-small{font:inherit;font-size:12.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer}',
     // the pane, not the window
     '@container (max-width:560px){.ask-log{padding:14px 12px}.ask-foot{padding:10px 12px}',
     '  .ask-turn.is-you .ask-bub{max-width:88%}.ask-welcome h2{font-size:20px}',
