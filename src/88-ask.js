@@ -172,6 +172,11 @@
     render();
   }
 
+  function lastListBlock() {
+    for (var i = st.turns.length - 1; i >= 0; i--) { var b = st.turns[i].block; if (b && b.kind === 'list') return b; }
+    return null;
+  }
+
   function ask(text) {
     st.turns.push({ who: 'person', text: text }); st.draft = ''; st.busy = true; keepRecent(text); render();
 
@@ -184,11 +189,33 @@
 
     var ctx = { brand: st.brand && st.brand.name, statuses: st.statuses, aiCheckValues: st.checks,
                 me: (st.me && st.me.name) || null };
+    // What is on screen, so it answers about the list in front of them instead of guessing at one. Names only: this
+    // is the thing people narrow by, and it is what stops "I can't do that" about a list it is holding.
+    var up = lastListBlock();
+    if (up) ctx.listOnScreen = { of: up.status, showing: up.rows.length, narrowedBy: up.narrowedBy || null,
+                                 canTick: !up.lookup, names: up.rows.slice(0, 40).map(function (x) { return x.name; }) };
     if (st.statusError) ctx.statusesCouldNotBeRead = st.statusError;   // never let it claim a brand has no statuses
     var convo = st.turns.filter(function (t) { return t.text; }).map(function (t) { return { who: t.who === 'person' ? 'person' : 'agent', text: t.text }; });
 
     return window.AICheckMiss.turn(ctx, convo, 'front').then(function (r) {
       stage(stages, 'read', 'done');
+      // Narrowing happens here, on rows already in hand. No second query, nothing to wait for — and it is why the
+      // assistant must never answer "I can't narrow it to BIZ" (Benn, 2026-10-06): the list was already sitting there.
+      if (r.kind === 'narrow' && r.outcome && r.outcome.match) {
+        stages.length = 0; st.busy = false;
+        var prev = lastListBlock();
+        if (!prev) { turn.text = r.reply || 'There’s no list up to narrow.'; render(); return; }
+        var m = String(r.outcome.match).toLowerCase();
+        var all = prev._all || prev.rows;
+        var hit = all.filter(function (row) { return row.name.toLowerCase().indexOf(m) >= 0; });
+        if (!hit.length) {
+          turn.text = 'None of those ' + all.length + ' has “' + r.outcome.match + '” in its name.';
+          render(); return;
+        }
+        prev._all = all; prev.rows = hit; prev.narrowedBy = r.outcome.match;
+        turn.text = r.reply || (hit.length + (hit.length === 1 ? ' has' : ' have') + ' “' + r.outcome.match + '” in the name.');
+        render(); return;
+      }
       var byCheck = (r.kind === 'findByCheck' && r.outcome && r.outcome.check);
       var byStatus = (r.kind === 'findByStatus' && r.outcome && r.outcome.status);
       if (!byCheck && !byStatus) {
@@ -225,10 +252,10 @@
           rows: rows.map(function (r2) {
             // In a lookup the useful column is where the check has got to; in the status route it is the workflow.
             return { name: r2.name, pages: r2.pages ? 'p' + r2.pages : '', state: lookup ? (r2.state || '') : r2.state,
-                     skip: (!lookup && r2.lockedBy) ? (r2.lockedBy + ' has it open — I can’t read a layout someone’s in.') : null };
+                     skip: (!lookup && r2.lockedBy) ? (r2.lockedBy + ' has it open — I can’t read a layout someone’s in.') : null,
+                     _row: r2 };
           }),
-          cost: 'About ' + Math.max(1, Math.round(take.length * 2.5)) + ' minutes. I’ll message you as each lands.',
-          _take: take
+          cost: 'About ' + Math.max(1, Math.round(take.length * 2.5)) + ' minutes. I’ll message you as each lands.'
         };
         var left = rows.length - take.length;
         if (lookup) {
@@ -283,13 +310,41 @@
     };
     var x = host.querySelector('#ask-close');
     if (x) x.onclick = function () { if (!st.writing) { st.turns = []; st.draft = ''; st.busy = false; render(); } };
+    // Picking. The rows carry their own on/off, so a tick survives a re-render and the button always says what will
+    // actually happen. Only the last list is interactive: an earlier one in the conversation has been acted on.
+    function lastList() {
+      for (var i = st.turns.length - 1; i >= 0; i--) { var b = st.turns[i].block; if (b && b.kind === 'list') return b; }
+      return null;
+    }
+    Array.prototype.forEach.call(host.querySelectorAll('.ask-pick input'), function (box) {
+      box.onchange = function () {
+        var list = lastList(); if (!list) return;
+        var row = list.rows[+box.dataset.i]; if (row) row.on = box.checked;
+        render();
+      };
+    });
+    var all = host.querySelector('.ask-all');
+    if (all) all.onclick = function () {
+      var list = lastList(); if (!list) return;
+      var pickable = list.rows.filter(function (r) { return !r.skip; });
+      var every = pickable.every(function (r) { return r.on !== false; });
+      pickable.forEach(function (r) { r.on = !every; });
+      render();
+    };
+    var un = host.querySelector('.ask-unnarrow');
+    if (un) un.onclick = function () {
+      var list = lastList(); if (!list || !list._all) return;
+      list.rows = list._all; list.narrowedBy = null; render();
+    };
     var cta = host.querySelector('.ask-cta');
     if (cta) cta.onclick = function () {
-      var list = null;
-      for (var i = st.turns.length - 1; i >= 0; i--) { var b = st.turns[i].block; if (b && b.kind === 'list') { list = b; break; } }
-      if (!list || !list._take || !list._take.length) return;
+      var list = lastList();
+      if (!list) return;
+      var take = list.rows.filter(function (r) { return !r.skip && r.on !== false; });
+      if (!take.length) return;
       cta.disabled = true;
-      runRequests(list._take);
+      // the rows the card draws are display shapes; the writer needs the Studio rows behind them
+      runRequests(take.map(function (r) { return r._row; }));
     };
     var q = host.querySelector('.ask-link');                // "Queue it" on a layout somebody has open
     if (q) q.onclick = function () {

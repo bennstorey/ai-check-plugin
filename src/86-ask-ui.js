@@ -47,13 +47,23 @@
   // ── the list: what I found, before I touch anything ──────────────────────────────────────────────────────────────
   // Everything found is shown, including what I will not act on and why. A layout somebody has open cannot be read,
   // so it is listed, excluded and explained rather than quietly dropped.
+  // Every row a person can act on carries a tick box. The assistant told Benn to "tick those three" when there were
+  // none (2026-10-06) — but it was right about what the list needed, so the control exists now. A list of 25 where
+  // only three are wanted is the normal case, not the exception.
   function listHtml(b) {
-    var take = b.rows.filter(function (r) { return !r.skip; });
+    var pickable = b.rows.filter(function (r) { return !r.skip; });
+    var picked = pickable.filter(function (r) { return r.on !== false; });
     return '<div class="ask-card">' +
       '<div class="ask-card-h"><b>' + b.rows.length + '</b> ' + (b.lookup ? 'at ' : 'in ') + esc(b.status) +
-        (b.brand ? ' · ' + esc(b.brand) : '') + '</div>' +
-      '<ul class="ask-rows">' + b.rows.map(function (r) {
-        return '<li class="ask-row' + (r.skip ? ' is-skip' : '') + '">' +
+        (b.brand ? ' · ' + esc(b.brand) : '') +
+        (b.narrowedBy ? '<span class="ask-filter">' + esc(b.narrowedBy) + '<button class="ask-unnarrow" title="Show them all">✕</button></span>' : '') +
+        ((!b.lookup && pickable.length > 1) ? '<button class="ask-all">' +
+          (picked.length === pickable.length ? 'None' : 'All') + '</button>' : '') + '</div>' +
+      '<ul class="ask-rows">' + b.rows.map(function (r, i) {
+        var pick = (!b.lookup && !r.skip)
+          ? '<label class="ask-pick"><input type="checkbox" data-i="' + i + '"' + (r.on === false ? '' : ' checked') + '></label>'
+          : (b.lookup ? '' : '<span class="ask-pick is-off"></span>');
+        return '<li class="ask-row' + (r.skip ? ' is-skip' : '') + (b.lookup ? '' : ' has-pick') + '">' + pick +
           '<span class="ask-rname">' + esc(r.name) + '</span>' +
           (r.pages ? '<span class="ask-rpg">' + esc(r.pages) + '</span>' : '') +
           '<span class="ask-rstate">' + esc(r.state) + '</span>' +
@@ -66,8 +76,12 @@
       // requests it all again.
       (b.lookup ? '' :
       '<div class="ask-card-f">' +
-        '<button class="ask-cta">Check ' + take.length + (take.length === 1 ? ' layout' : ' layouts') + '</button>' +
-        '<span class="ask-fnote">' + esc(b.cost) + '</span>' +
+        '<button class="ask-cta"' + (picked.length ? '' : ' disabled') + '>Check ' + picked.length +
+          (picked.length === 1 ? ' layout' : ' layouts') + '</button>' +
+        // the time follows the ticks: an estimate for work nobody asked for is just a wrong number
+        '<span class="ask-fnote">' + (picked.length
+          ? 'About ' + Math.max(1, Math.round(picked.length * (b.minsEach || 2.5))) + ' minutes. I’ll message you as each lands.'
+          : 'Tick the ones you want.') + '</span>' +
       '</div>') +
     '</div>';
   }
@@ -204,6 +218,7 @@
   var CSS = [
     '.ask{--ai:#6B03FC;--ground:#f8fafc;--paper:#fff;--ink:#0f172a;--ink-2:#374151;--ink-3:#6b7280;--ink-4:#94a3b8;',
     '  --line:#e2e8f0;--line-2:#f1f5f9;--accent:#f59e0b;--accent-ink:#111827;--ok:#15803d;--bad:#c80909;--warn:#c86b00;',
+    '  --ai-wash:#f3ecff;',
     // Studio's own theme fonts (Benn, 2026-10-06): Mulish for reading, Raleway for headings. Named first and the
     // system stack behind them, so the surface still reads properly wherever the webfonts have not loaded.
     '  --font-b:Mulish,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;',
@@ -266,6 +281,16 @@
     '.ask-rpg{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}',
     '.ask-rstate{font-size:11.5px;color:var(--ink-3);text-align:right}',
     '.ask-rskip{grid-column:1/4;font-size:11.5px;color:var(--ink-3)}',
+    // picking: the tick box leads the row, and the whole label is the hit area
+    '.ask-row.has-pick{grid-template-columns:18px minmax(0,1fr) auto auto}',
+    '.ask-row.has-pick .ask-rskip{grid-column:1/5}',
+    '.ask-pick{display:flex;align-items:center;justify-content:center;height:18px;cursor:pointer}',
+    '.ask-pick input{width:15px;height:15px;margin:0;accent-color:var(--ai);cursor:pointer}',
+    '.ask-pick.is-off{cursor:default}',
+    '.ask-all{font:inherit;font-size:11.5px;font-weight:600;margin-left:auto;background:none;border:0;padding:0;color:var(--ai);cursor:pointer;text-decoration:underline}',
+    '.ask-filter{display:inline-flex;gap:5px;align-items:center;font-size:11.5px;font-weight:600;color:var(--ai);background:var(--ai-wash);border-radius:999px;padding:1px 4px 1px 8px}',
+    '.ask-unnarrow{font:inherit;font-size:12px;line-height:1;background:none;border:0;padding:2px 4px;color:inherit;cursor:pointer}',
+    '.ask-cta:disabled{opacity:.45;cursor:default}',
     // in a run the row leads with its mark
     '.ask-card .ask-row.is-done,.ask-card .ask-row.is-active,.ask-card .ask-row.is-failed,.ask-card .ask-row.is-pending{grid-template-columns:18px minmax(0,1fr) auto auto}',
     '.ask-row.is-done .ask-mark{background:#e6f4ea;color:var(--ok)}',
