@@ -44,9 +44,14 @@
   // honours: a status name that is nearly right comes back as nothing at all, silently, and reads as "none found".
   function statuses() {
     if (!st.brand) return Promise.resolve([]);
-    return callServer('GetStates', { PublicationId: String(st.brand.id), Type: 'Layout', __classname__: 'WflGetStatesRequest' })
+    // The shape matters and is not obvious: Publication is an OBJECT with an Id, not a PublicationId string. Getting
+    // that wrong returns an error, and swallowing the error made the app say "I can't see any statuses" as though the
+    // brand had none — a lie about Studio rather than a fault of mine (live in the lab, 2026-10-06).
+    st.statusError = null;
+    return callServer('GetStates', { Publication: { Id: String(st.brand.id), __classname__: 'Publication' },
+                                     Issue: null, Section: null, Type: 'Layout', __classname__: 'WflGetStatesRequest' })
       .then(function (r) { st.statuses = ((r && r.States) || []).map(function (s) { return s.Name; }); return st.statuses; })
-      .catch(function () { st.statuses = []; return st.statuses; });
+      .catch(function (e) { st.statuses = []; st.statusError = String((e && e.message) || e); return st.statuses; });
   }
   function layoutsIn(status) {
     var p = [{ Property: 'Type', Operation: '=', Value: 'Layout', __classname__: 'QueryParam' },
@@ -148,6 +153,7 @@
     st.turns.push(turn);
 
     var ctx = { brand: st.brand && st.brand.name, statuses: st.statuses, me: (st.me && st.me.name) || null };
+    if (st.statusError) ctx.statusesCouldNotBeRead = st.statusError;   // never let it claim a brand has no statuses
     var convo = st.turns.filter(function (t) { return t.text; }).map(function (t) { return { who: t.who === 'person' ? 'person' : 'agent', text: t.text }; });
 
     return window.AICheckMiss.turn(ctx, convo, 'front').then(function (r) {
@@ -162,7 +168,9 @@
       stage(stages, 'st', known ? 'done' : 'warn', known ? status + ' is there' : 'no status called ' + status);
       if (!known) {
         stages.length = 0; st.busy = false;
-        say('There’s no status called “' + status + '” in ' + (st.brand ? st.brand.name : 'this brand') + '. The ones I can see: ' + st.statuses.join(' · ') + '.');
+        say(st.statusError
+          ? 'I couldn’t read the statuses for ' + (st.brand ? st.brand.name : 'this brand') + ' — ' + st.statusError + '. That is my end, not yours.'
+          : 'There’s no status called “' + status + '” in ' + (st.brand ? st.brand.name : 'this brand') + '. The ones I can see: ' + st.statuses.join(' · ') + '.');
         render(); return;
       }
       stage(stages, 'find', 'active');
