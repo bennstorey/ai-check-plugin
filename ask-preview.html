@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Ask Studio — the real app, a fake Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet">
+<!--
+  The whole flow, end to end, with nothing at risk: the REAL plug-in, the REAL service, and a FAKE Studio whose
+  statuses and layouts are the lab's own (read from lab-studio on 2026-10-06). Every write is logged instead of made.
+  Point it at the deployed service or one on this Mac.
+
+      sh 04-scripts/studio-plugin/ask-preview.sh        # http://localhost:8801/ask-preview.html
+-->
+<style>
+  body{margin:0;font:14px/1.5 Mulish,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:#e9edf1;color:#0f172a}
+  .bar{position:sticky;top:0;z-index:50;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#0f172a;color:#fff;font-size:12px}
+  .bar b{font-weight:700}
+  .bar button{font:inherit;padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#fff;cursor:pointer}
+  .bar button.on{background:#f59e0b;border-color:#f59e0b;color:#111827;font-weight:700}
+  .bar input{font:inherit;font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#fff;width:230px}
+  .pane{margin:0 auto;background:#fff;height:calc(100vh - 42px - 22px);max-width:100%;overflow:auto;box-shadow:0 0 0 1px #cbd5e1;position:relative}
+  .logwrap{position:fixed;left:0;right:0;bottom:0;z-index:60;font:11px/1.45 ui-monospace,Menlo,monospace}
+  .logbar{display:flex;gap:10px;align-items:center;padding:3px 10px;background:#0f172a;color:#64748b;cursor:pointer}
+  .logbar b{color:#fbbf24;font-weight:700}
+  .log{max-height:0;overflow:auto;background:#0f172a;color:#cbd5e1;padding:0 10px;transition:max-height .15s ease}
+  .logwrap.open .log{max-height:34vh;padding:6px 10px}
+  .log b{color:#fbbf24}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Ask Studio</b>
+  <span>pane:</span>
+  <button data-w="wide">wide</button>
+  <button data-w="1100">1100</button>
+  <button data-w="860">860</button>
+  <button data-w="640">640</button>
+  <button data-w="420">420</button>
+  <span>service:</span><input id="base" placeholder="https://ask-service.fly.dev">
+  <button id="setbase">use it</button>
+  <span style="flex:1"></span>
+  <button id="reset">start again</button>
+</div>
+<div class="pane" id="pane"></div>
+<div class="logwrap" id="logwrap"><div class="logbar" id="logbar"><b id="logn">0</b> <span>what the fake Studio was asked — click to open</span></div><div class="log" id="log"></div></div>
+
+<script>
+(function () {
+  var log = document.getElementById('log');
+  function say(what, detail) {
+    var d = document.createElement('div');
+    d.innerHTML = '<b>' + what + '</b> ' + (detail ? String(detail).replace(/[<&]/g, function (c) { return c === '<' ? '&lt;' : '&amp;'; }) : '');
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+    document.getElementById('logn').textContent = log.children.length;
+  }
+  document.getElementById('logbar').onclick = function () { document.getElementById('logwrap').classList.toggle('open'); };
+
+  window.csConfig = { serverUrl: '/server/index.php' };
+
+  // ── the lab's own shape, so the widths and the words are honest ────────────────────────────────────────────────
+  var BRANDS = [{ Id: '22', Name: 'WW Development Sandbox' }, { Id: '1', Name: 'WW Demo' }];
+  var STATES = ['layout', 'Design Check', 'Generate PDF', 'AI Check & Tidy', 'AI Check Done', 'AI Check – Needs Attention', 'AI Fix Approved'];
+  var LAYOUTS = [
+    { ID: '93086', Name: 'BIZ1907opener',  State: 'Design Check', PageRange: '037',     LockedBy: '',           C_AI_CHECK: 'Checked' },
+    { ID: '93084', Name: 'BIZ1907Segro',   State: 'Design Check', PageRange: '041',     LockedBy: '',           C_AI_CHECK: 'Checked' },
+    { ID: '93088', Name: 'FOR1907maltby',  State: 'Design Check', PageRange: '028',     LockedBy: 'Sam Pринце', C_AI_CHECK: 'Not requested' },
+    { ID: '93095', Name: 'WLD1907latvia',  State: 'Design Check', PageRange: '024-025', LockedBy: '',           C_AI_CHECK: 'Not requested' },
+    { ID: '94502', Name: 'DEMO 2 - HOM1907burnhamodyssey', State: 'layout', PageRange: '010-011', LockedBy: '', C_AI_CHECK: 'Fixes applied' }
+  ];
+  LAYOUTS[2].LockedBy = 'Sam Prince';
+  var WROTE = {};                                          // what a write WOULD have done
+
+  var FAKE = {
+    GetUserProfile: function () { return { CurrentUser: { UserID: 'benn.storey', FullName: 'Benn Storey', PublicUuid: 'faf5b030-5930-7762-50a5-fa1ec384cf58' } }; },
+    GetPublications: function () { return { Publications: BRANDS }; },
+    GetStates: function (p) { say('GetStates', 'brand ' + p.PublicationId); return { States: STATES.map(function (n, i) { return { Id: String(600 + i), Name: n, Type: 'Layout' }; }) }; },
+    QueryObjects: function (p) {
+      var want = {};
+      (p.Params || []).forEach(function (q) { want[q.Property] = q.Value; });
+      say('QueryObjects', JSON.stringify(want));
+      var cols = p.MinimalProps || ['ID', 'Name'];
+      var rows = LAYOUTS.filter(function (l) { return (!want.State || l.State === want.State); })
+                        .map(function (l) { return cols.map(function (c) { return l[c] !== undefined ? l[c] : ''; }); });
+      return { Columns: cols.map(function (c) { return { Name: c }; }), Rows: rows };
+    },
+    GetObjects: function (p) {
+      var id = (p.IDs || [])[0], l = LAYOUTS.filter(function (x) { return x.ID === id; })[0] || {};
+      var extra = [{ Property: 'C_AI_CHECK', Values: [(WROTE[id] && WROTE[id].C_AI_CHECK) || l.C_AI_CHECK || ''] },
+                   { Property: 'C_AI_ACTIONS', Values: [(WROTE[id] && WROTE[id].C_AI_ACTIONS) || ''] }];
+      return { Objects: [{ MetaData: { BasicMetaData: { ID: id, Name: l.Name }, ExtraMetaData: extra } }] };
+    },
+    SetObjectProperties: function (p) {
+      var id = p.ID, w = WROTE[id] = WROTE[id] || {};
+      ((p.MetaData && p.MetaData.ExtraMetaData) || []).forEach(function (x) { w[x.Property] = x.Values[0]; });
+      say('SetObjectProperties → ' + id, Object.keys(w).map(function (k) {
+        return k + '=' + (k === 'C_AI_ACTIONS' ? JSON.parse(w[k] || '{}').requestedBy + ' (' + (JSON.parse(w[k] || '{}').requestedByUuid || '').slice(0, 8) + '…)' : w[k]);
+      }).join('  '));
+      return {};
+    }
+  };
+
+  var realFetch = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    var u = String(url);
+    if (u.indexOf('index.php') >= 0) {
+      var m = /method=([^&]+)/.exec(u), name = m ? decodeURIComponent(m[1]) : '?';
+      var body = {}; try { body = JSON.parse(opts.body).params[0]; } catch (e) {}
+      var fn = FAKE[name];
+      if (!fn) say('UNANSWERED', name);
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ result: fn ? fn(body) : {} }); } });
+    }
+    return realFetch(url, opts);                            // the service is real
+  };
+
+  window.ContentStationSdk = {
+    getInfo: function () { return { Ticket: 'preview', User: 'benn.storey' }; },
+    showNotification: function (o) { say('notification', o && o.content); },
+    onSignin: function () {}, onSignout: function () {},
+    registerCustomApp: function (app) {
+      if (app.name !== 'ask-studio') { say('also registered', app.title); return; }   // AI Check is not this preview's business
+      document.getElementById('pane').innerHTML = app.content;
+      say('registered', app.title);
+      setTimeout(function () { try { app.onInit && app.onInit(); } catch (e) { say('onInit failed', e.message); } }, 0);
+    }
+  };
+
+  var pane = document.getElementById('pane');
+  function setW(w) {
+    pane.style.width = (w === 'wide' ? '100%' : w + 'px');
+    Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.classList.toggle('on', b.dataset.w === String(w)); });
+    try { localStorage.setItem('askst-preview-w', String(w)); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.bar button[data-w]'), function (b) { b.onclick = function () { setW(b.dataset.w); }; });
+  var savedW; try { savedW = localStorage.getItem('askst-preview-w'); } catch (e) {}
+  setW(savedW || 'wide');
+
+  var baseBox = document.getElementById('base');
+  try { baseBox.value = localStorage.getItem('aicheck-ask-base') || ''; } catch (e) {}
+  document.getElementById('setbase').onclick = function () {
+    try { baseBox.value ? localStorage.setItem('aicheck-ask-base', baseBox.value.trim()) : localStorage.removeItem('aicheck-ask-base'); } catch (e) {}
+    location.reload();
+  };
+  document.getElementById('reset').onclick = function () { location.reload(); };
+  window.addEventListener('error', function (e) { say('error', e.message); });
+})();
+</script>
+<script src="dist/ai-check-plugin.js"></script>
+</body>
+</html>
