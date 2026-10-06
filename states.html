@@ -148,7 +148,8 @@
                 outcome: { route: 'ask', ask: { question: 'Is a cut-out cropped at the knee right for this section, or should it always show the feet?' } } } ],
     answer: [ { reply: 'Because the rule measured empty frame, not lost subject: 23% of the frame was empty at the top and left, which on its own reads like white space a designer chose. I dropped it. The frame was 1980956 on page 11.', done: true, outcome: { route: 'answered' } } ]
   };
-  window.AICheckMiss = {
+  var REAL = (function(){ try { return localStorage.getItem('aicheck-ask-base'); } catch(e){ return null; } })();
+  var SCRIPTED = {
     contract: 1,
     health: function () { return Promise.resolve({ ok: true, contract: 1 }); },
     turn: function (ctx, turns) {
@@ -163,6 +164,10 @@
       return new Promise(function (res) { setTimeout(function () { res(script[i]); }, 450); });
     }
   };
+  // The plug-in defines the real one when it loads, so put the scripted one back afterwards — unless this browser has
+  // been pointed at a service on purpose (localStorage aicheck-ask-base), in which case talk to it for real.
+  if (REAL) { say('ask', 'talking to the real service at ' + REAL); }
+  else { window.AICheckMiss = SCRIPTED; window.addEventListener('load', function () { window.AICheckMiss = SCRIPTED; }); }
 
   window.addEventListener('error', function (e) { say('error', e.message); });
 })();
