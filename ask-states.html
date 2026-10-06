@@ -108,6 +108,14 @@
         { name: 'WLD1907latvia', state: 'pending', detail: '' } ] } }
     ] }],
 
+    ['doing it — no way out', { brands: BRANDS, brand: BRANDS[0], writing: true, turns: [
+      { who: 'person', text: ASK },
+      { who: 'me', text: 'On it.', block: { kind: 'run', t0: now - 3000, rows: [
+        { name: 'BIZ1907opener', state: 'done',    detail: 'asked for', t0: now - 3000, t1: now - 2000 },
+        { name: 'BIZ1907Segro',  state: 'active',  detail: 'writing',   t0: now - 2000 },
+        { name: 'WLD1907latvia', state: 'pending', detail: '' } ] } }
+    ] }],
+
     ['done', { brands: BRANDS, brand: BRANDS[0], turns: [
       { who: 'person', text: ASK },
       { who: 'me', text: 'On it.', block: { kind: 'run', finished: true, t0: now - 21000, t1: now - 3000, rows: [

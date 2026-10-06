@@ -91,7 +91,8 @@
           clock(r.t0, r.t1) +
           '</li>';
       }).join('') + '</ul>' +
-      (b.finished ? '<p class="ask-note">' + esc(b.after) + '</p>' : '') +
+      (b.finished ? '<p class="ask-note">' + esc(b.after) + '</p>'
+                  : '<p class="ask-note">A second each. The checking itself happens on its own afterwards — that part you can walk away from.</p>') +
     '</div>';
   }
 
@@ -147,7 +148,7 @@
   function recentHtml(st) {
     var r = st.recent || [];
     if (!r.length) return '';
-    return '<div class="ask-recent"><select class="ask-recentsel"><option value="">Asked before…</option>' +
+    return '<div class="ask-recent"><select class="ask-recentsel"><option value="">Past questions…</option>' +
       r.map(function (q, i) { return '<option value="' + i + '">' + esc(q) + '</option>'; }).join('') +
       '</select></div>';
   }
@@ -176,9 +177,10 @@
     return '<div class="ask-app">' +
       // Start again, and get this out of the way, without leaving the app (Benn, 2026-10-06). Studio's own Apps menu
       // is how you leave entirely; this is how you drop a conversation you no longer need.
-      '<div class="ask-top"><span class="ask-top-t">' + esc(st.brand || '') + '</span>' +
-        '<button class="ask-ib" id="ask-new" title="Start again">New</button>' +
-        '<button class="ask-ib" id="ask-close" title="Put this away">✕</button></div>' +
+      '<div class="ask-top' + (st.writing ? ' is-writing' : '') + '">' +
+        '<span class="ask-top-t">' + (st.writing ? 'Writing to Studio — a few seconds. Don’t close this.' : esc(st.brand || '')) + '</span>' +
+        '<button class="ask-ib" id="ask-new" title="Start again"' + (st.writing ? ' disabled' : '') + '>New</button>' +
+        '<button class="ask-ib" id="ask-close" title="Put this away"' + (st.writing ? ' disabled' : '') + '>✕</button></div>' +
       '<div class="ask-log">' + st.turns.map(turnHtml).join('') + '</div>' +
       '<div class="ask-foot">' + composerHtml(st, false) +
         '<p class="ask-foot-note">Nothing changes in Studio until you say so.</p>' +
@@ -287,6 +289,9 @@
     '.ask-field{flex:1 1 auto;min-width:0;position:relative;display:flex;flex-direction:column}',
     '.ask-brand{align-self:flex-start;margin:6px 0 0;font:inherit;font-size:11.5px;color:var(--ink-3);background:var(--ground);border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer;field-sizing:content}',
     '.ask-top{flex:0 0 auto;display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--paper)}',
+    '.ask-top.is-writing{background:#fff8e8;border-bottom-color:#f0dcb4}',
+    '.ask-top.is-writing .ask-top-t{color:var(--warn);font-weight:600}',
+    '.ask-ib:disabled{opacity:.4;cursor:default}',
     '.ask-top-t{flex:1 1 auto;min-width:0;font-size:12px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.ask-ib{font:inherit;font-size:12px;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:3px 9px;cursor:pointer}',
     '.ask-ib:hover{border-color:var(--ink-3)}',
