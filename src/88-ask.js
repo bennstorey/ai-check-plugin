@@ -266,7 +266,7 @@
     name: 'ask-studio',
     title: 'Ask Studio',
     iconUrl: (function () {
-      try { var s = document.querySelector('script[src*="ai-check-plugin"]'); return s ? s.src.replace(/[^/]+$/, 'icons/spread-check.svg') : ''; } catch (e) { return ''; }
+      try { var s = document.querySelector('script[src*="ai-check-plugin"]'); return s ? s.src.replace(/[^/]+$/, 'icons/ai-dot.svg') : ''; } catch (e) { return ''; }
     })(),
     content: '<div class="ask" id="' + ROOT + '-app"></div>',
     onInit: function () {
