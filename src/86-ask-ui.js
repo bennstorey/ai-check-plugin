@@ -157,7 +157,7 @@
   function composerHtml(st, big) {
     return '<div class="ask-composer' + (big ? ' is-big' : '') + '">' +
       '<div class="ask-field">' +
-        '<textarea class="ask-input" rows="' + (big ? 2 : 1) + '" placeholder="' + (big ? 'I’m running late and I’ve another spread to build…' : 'Say a bit more') + '"' + (st.busy ? ' disabled' : '') + '>' + esc(st.draft || '') + '</textarea>' +
+        '<textarea class="ask-input" rows="' + (big ? 2 : 1) + '" placeholder="' + (big ? 'Ask me a question…' : 'Say a bit more') + '"' + (st.busy ? ' disabled' : '') + '>' + esc(st.draft || '') + '</textarea>' +
         (big ? '' : brandHtml(st)) +
       '</div>' +
       '<button class="ask-send"' + (st.busy ? ' disabled' : '') + '>' + (st.busy ? 'Thinking…' : 'Ask') + '</button>' +
