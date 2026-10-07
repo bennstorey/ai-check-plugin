@@ -97,8 +97,11 @@
     getInfo: function () { return { Ticket: 'states', User: 'designer' }; },
     showNotification: function (o) { say('notification', o && o.content); },
     onSignin: function () {}, onSignout: function () {},
+    // This board is AI Check's cards. Two apps ship in one bundle, and whichever registered LAST used to win the
+    // pane — so once Ask Studio existed, this page silently showed its front door instead (2026-10-07).
     registerCustomApp: function (app) {
-      document.getElementById('pane').innerHTML = app.content;
+      if (app.name === 'ask-studio') { say('also registered', app.title); return; }   // ask-states.html is its board
+      document.getElementById('pane').innerHTML += app.content;
       say('plug-in registered', app.title || app.name);
       setTimeout(function () { try { app.onInit && app.onInit(); } catch (e) { say('onInit failed', e.message); } }, 0);
     }

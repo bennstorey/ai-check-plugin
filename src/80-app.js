@@ -283,8 +283,10 @@
       var topPart = $('aicheck-addinfo-top'), toolbar = document.querySelector('.aicheck-app .toolbar'); if (topPart && toolbar) topPart.appendChild(toolbar);
       // Nothing loaded yet: the design's card, so the app says what it is and what happens next (Figma 2015:4)
       var empty = document.createElement('div'); empty.className = 'emptystate'; empty.id = 'aicheck-empty';
+      // The same mark, the same type, the same card as Ask Studio's front door (Benn, 2026-10-07): two entries in the
+      // Apps menu, one assistant. The butterfly is lifted from AskUI so there is exactly one copy of it.
       empty.innerHTML = '<div class="es-card">' +
-        '<div class="es-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="14" y="13" width="7" height="8" rx="1.5"></rect></svg></div>' +
+        '<div class="es-icon">' + ((window.AskUI && window.AskUI.MARK) || '') + '</div>' +
         '<h3>No layout loaded</h3>' +
         '<p>Pick the layout you have been asked to look at from the list at the top.</p>' +
         '<ol class="es-steps"><li><span>1</span>Load the layout you are working on</li>' +
@@ -298,8 +300,26 @@
         ['aicheck-groups-host', 'toolbar', 'groups'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = !on; });
         var tb = document.querySelector('.aicheck-app .toolbar'), out = document.querySelector('.aicheck-app .out'); if (tb) tb.hidden = !on; if (out) out.hidden = !on;
         if (topc) topc.hidden = !on; if (sidehead) sidehead.hidden = !on;
+        var hint = $('aicheck-aihint'); if (hint && on) hint.hidden = true;   // the drawer takes over from here
         if (main) main.classList.toggle('nowork', !on); }
       window.__aiCheckShowWork = showWork; showWork(false);
+      // The dot before anything is loaded. Its real handler is wired by bootReview, which only runs once a report is
+      // on screen — so until then the dot was there and did nothing (Benn, 2026-10-07). A button that looks live and
+      // is not is worse than no button: it answers now, and says what it needs. bootReview overwrites this later.
+      (function () {
+        var dot = document.querySelector('.aicheck-app .aidot');
+        if (!dot) return;
+        var hint = document.createElement('div');
+        hint.className = 'aihint'; hint.id = 'aicheck-aihint'; hint.hidden = true;
+        hint.innerHTML = '<span class="aihint-av">' + ((window.AskUI && window.AskUI.MARK) || '') + '</span>' +
+          '<div><p>Load a layout and I can answer questions about this check — why I said something, or what I missed.</p>' +
+          '<p class="aihint-2">To ask about layouts generally, open <b>Ask Studio</b> from the Apps menu.</p></div>' +
+          '<button class="aihint-x" aria-label="Close">✕</button>';
+        dot.parentNode.insertBefore(hint, dot);
+        hint.querySelector('.aihint-x').onclick = function () { hint.hidden = true; };
+        dot.onclick = function () { if (S.review) return; hint.hidden = !hint.hidden; };
+        document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') hint.hidden = true; });
+      })();
       fitHeight(); window.addEventListener('resize', fitHeight); setTimeout(fitHeight, 300);
       var bl = $('aicheck-buildline'); if (bl) bl.textContent = 'AI Check plug-in build ' + VERSION;
       initSplitter();

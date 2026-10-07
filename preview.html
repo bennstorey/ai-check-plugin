@@ -101,16 +101,21 @@
     getInfo: function () { return { Ticket: 'preview', User: 'benn.storey' }; },
     showNotification: function (o) { say('notification', o && o.content); },
     onSignin: function () {}, onSignout: function () {},
+    // This harness is AI Check's. Two apps ship in one bundle, and whichever registered LAST used to win the pane —
+    // so once Ask Studio existed, this preview silently showed the wrong app and AI Check's onInit died on a missing
+    // element (2026-10-07). The bar and the app both belong to AI Check and both mount here.
     registerCustomApp: function (app) {
+      if (app.name === 'ask-studio') { say('also registered', app.title); return; }   // ask-preview.html is its harness
       var pane = document.getElementById('pane');
-      pane.innerHTML = app.content;
+      pane.innerHTML += app.content;
       say('plug-in registered', app.title || app.name);
       setTimeout(function () { try { app.onInit && app.onInit(); } catch (e) { say('onInit failed', e.message + ' — ' + (e.stack || '').split('\n')[1]); } }, 0);
     }
   };
 
   // the layout the preview shows: a real saved report and the real page previews, filled in by preview.sh
-  window.__aiCheckDemo = {
+  // ?empty previews the no-layout state — the first thing anybody sees, and the one the demo report used to hide
+  window.__aiCheckDemo = /[?&]empty\b/.test(location.search) ? null : {
     id: '93098', name: 'HOM1907burnhamodyssey', version: '0.14',
     previews: { '10': 'preview-data/page-10.jpg', '11': 'preview-data/page-11.jpg' },
     report: 'preview-data/report.json'

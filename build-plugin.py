@@ -68,6 +68,16 @@ STUDIO_CSS = """
 .aicheck-app{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden;container-type:inline-size;position:relative}
 /* the dot and the drawer hang off the app's own box, so they cannot ride over Studio's chrome (2026-10-06) */
 .aicheck-app .aidot,.aicheck-app .aidrawer{position:absolute}
+/* what the dot says before a layout is loaded (2026-10-07): the drawer's shape, one sentence in it */
+.aicheck-app .aihint{position:absolute;right:18px;bottom:76px;z-index:41;width:min(320px,calc(100% - 36px));
+  display:flex;gap:10px;align-items:flex-start;padding:12px 12px 12px 13px;background:var(--paper);
+  border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(15,23,42,.14)}
+.aicheck-app .aihint[hidden]{display:none}
+.aicheck-app .aihint p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.aicheck-app .aihint .aihint-2{margin-top:7px;font-size:12px;color:var(--ink-3)}
+.aicheck-app .aihint-av{flex:none;width:26px;height:26px;border-radius:50%;background:var(--ai,#6B03FC);color:#fff;display:flex;align-items:center;justify-content:center}
+.aicheck-app .aihint-av svg{width:62%;height:62%}
+.aicheck-app .aihint-x{flex:none;margin-left:auto;align-self:flex-start;background:none;border:0;padding:2px 4px;font-size:13px;line-height:1;color:var(--ink-3);cursor:pointer}
 .aicheck-app .apppanel{margin:0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex:0 0 auto;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}
 .aicheck-app [hidden]{display:none!important}
 /* the bar (Figma 2004:338): one row under the tabs, full width, always there */
@@ -75,7 +85,8 @@ STUDIO_CSS = """
 .aicheck-app .aicheck-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 24px;background:var(--ground);border-bottom:1px solid var(--line);font-size:13px;color:var(--ink)}
 .aicheck-app .aicheck-bar label{display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
 .aicheck-app .aicheck-bar label.dim{color:var(--ink-3)}
-.aicheck-app .aicheck-bar input,.aicheck-app .aicheck-bar select{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:5px 9px;font-size:13px}
+.aicheck-app .aicheck-bar input,.aicheck-app .aicheck-bar select{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:13px}
+.aicheck-app .aicheck-bar label{font-family:var(--font-h);font-weight:600;color:var(--ink-2)}
 .aicheck-app .aicheck-bar input{width:96px}.aicheck-app .aicheck-bar select{min-width:260px;max-width:340px}
 .aicheck-app .aicheck-bar .btn{white-space:nowrap}
 /* the development tools sit behind this, at the end of the bar, and are not part of what a desk sees */
@@ -104,8 +115,10 @@ STUDIO_CSS = """
 .aicheck-app .apppanel{background:var(--ground)}
 .aicheck-app .emptystate{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .aicheck-app .es-card{max-width:480px;width:100%;background:var(--ground);border:1px solid var(--line);border-radius:12px;padding:28px 30px;text-align:center}
-.aicheck-app .es-icon{width:58px;height:58px;border-radius:50%;background:var(--accent-soft);color:var(--ink);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
-.aicheck-app .es-card h3{margin:0 0 8px;font-size:17px;font-weight:600;color:var(--ink)}
+/* Ask Studio's own mark and heading (Benn, 2026-10-07): one assistant, so the two front doors look like each other */
+.aicheck-app .es-icon{width:52px;height:52px;border-radius:50%;background:var(--ai,#6B03FC);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.aicheck-app .es-icon svg{width:62%;height:62%}
+.aicheck-app .es-card h3{margin:0 0 6px;font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
 .aicheck-app .es-card p{margin:0 auto 18px;max-width:400px;color:var(--ink-2);font-size:13px;line-height:1.5}
 .aicheck-app .es-steps{list-style:none;margin:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:10px}
 .aicheck-app .es-steps li{display:flex;gap:10px;align-items:flex-start;color:var(--ink-2);font-size:13px;line-height:1.45}
